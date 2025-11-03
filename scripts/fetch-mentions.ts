@@ -9,7 +9,8 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 config({ path: resolve(process.cwd(), '.env.local') });
 
-import { twitterApi } from '../src/lib/api/twitter';
+import { getTwitterApi } from '../src/lib/api/twitter';
+const twitterApi = getTwitterApi();
 import { db } from '../src/lib/db';
 import { users, twitterMentions } from '../src/lib/db/schema';
 import { calculateQualityScore } from '../src/lib/utils/scoring';

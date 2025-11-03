@@ -131,6 +131,21 @@ export class TwitterApiClient {
   }
 }
 
-// Export singleton instance
-export const twitterApi = new TwitterApiClient();
+// Export singleton instance (lazy initialization)
+let _twitterApi: TwitterApiClient | null = null;
+
+export function getTwitterApi(): TwitterApiClient {
+  if (!_twitterApi) {
+    _twitterApi = new TwitterApiClient();
+  }
+  return _twitterApi;
+}
+
+// Legacy export for backwards compatibility
+export const twitterApi = {
+  get searchMentions() { return getTwitterApi().searchMentions.bind(getTwitterApi()); },
+  get getTweet() { return getTwitterApi().getTweet.bind(getTwitterApi()); },
+  get getUserByUsername() { return getTwitterApi().getUserByUsername.bind(getTwitterApi()); },
+  get getUserById() { return getTwitterApi().getUserById.bind(getTwitterApi()); },
+};
 
