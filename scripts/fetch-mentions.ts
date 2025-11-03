@@ -4,6 +4,11 @@
  * Usage: tsx scripts/fetch-mentions.ts
  */
 
+// Load environment variables from .env.local
+import { config } from 'dotenv';
+import { resolve } from 'path';
+config({ path: resolve(process.cwd(), '.env.local') });
+
 import { twitterApi } from '../src/lib/api/twitter';
 import { db } from '../src/lib/db';
 import { users, twitterMentions } from '../src/lib/db/schema';
