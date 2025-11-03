@@ -145,13 +145,13 @@ export default function DashboardPage() {
                         </div>
                         <div className="text-xs text-pencil-light">Linked</div>
                       </div>
-                      <button
-                        onClick={() => unlinkTwitterMutation.mutate()}
-                        disabled={unlinkTwitterMutation.isLoading}
-                        className="btn-sketch px-3 py-1 text-xs bg-accent-red text-white hover:bg-accent-red/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {unlinkTwitterMutation.isLoading ? 'Unlinking...' : 'Unlink'}
-                      </button>
+              <button
+                onClick={() => unlinkTwitterMutation.mutate()}
+                disabled={unlinkTwitterMutation.isPending}
+                className="btn-sketch px-3 py-1 text-xs bg-accent-red text-white hover:bg-accent-red/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {unlinkTwitterMutation.isPending ? 'Unlinking...' : 'Unlink'}
+              </button>
                     </div>
                     {linkError && (
                       <div className="mt-2 text-xs text-accent-red">
