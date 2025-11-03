@@ -177,7 +177,9 @@ export default function LeaderboardPage() {
                         {/* Status */}
                         <td className="p-4 text-center">
                           {user.isVerified && (
-                            <MedievalIcon name="flag" size={20} title="Verified Cultist" />
+                            <span title="Verified Cultist">
+                              <MedievalIcon name="flag" size={20} alt="Verified Cultist" />
+                            </span>
                           )}
                         </td>
                       </tr>
