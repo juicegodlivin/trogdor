@@ -76,11 +76,19 @@ async function initializeTables() {
   }
 }
 
-// Run initialization - ALWAYS run to ensure tables exist
-console.log('🚀 Starting database initialization...');
-initializeTables().catch((err) => {
-  console.error('Fatal initialization error:', err);
-});
+// Run initialization ONLY at runtime, NOT during build
+// Check if we're in a build context vs runtime context
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                    process.env.NEXT_BUILD === 'true';
+
+if (!isBuildTime) {
+  console.log('🚀 Starting database initialization...');
+  initializeTables().catch((err) => {
+    console.error('Fatal initialization error:', err);
+  });
+} else {
+  console.log('⏭️  Skipping database initialization during build');
+}
 
 export const db = drizzle(queryClient, { schema });
 
