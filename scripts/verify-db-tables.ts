@@ -23,13 +23,13 @@ async function verifyTables() {
 
   try {
     // Query all tables in the database
-    const result = await db.execute<{ tablename: string }>(sql`
+    const result = await db.execute(sql`
       SELECT tablename 
       FROM pg_tables 
       WHERE schemaname = 'public'
     `);
 
-    const existingTables = result.rows.map((r) => r.tablename);
+    const existingTables = (result as any[]).map((r: any) => r.tablename);
 
     console.log('📋 Existing tables:');
     existingTables.forEach((table) => {
@@ -59,10 +59,10 @@ async function verifyTables() {
       // Count records in each table
       console.log('📊 Record counts:');
       for (const table of requiredTables) {
-        const countResult = await db.execute<{ count: number }>(
+        const countResult = await db.execute(
           sql.raw(`SELECT COUNT(*) as count FROM "${table}"`)
-        );
-        const count = countResult.rows[0]?.count || 0;
+        ) as any[];
+        const count = Number(countResult[0]?.count || 0);
         console.log(`   ${table}: ${count} records`);
       }
       
