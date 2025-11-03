@@ -18,32 +18,30 @@ export interface TwitterUser {
 export interface TwitterTweet {
   id: string;
   text: string;
-  author_id: string;
-  created_at: string;
+  author_id?: string; // Legacy field for compatibility
+  created_at?: string; // Legacy field for compatibility
+  createdAt: string; // Actual API field
+  author?: {
+    id: string;
+    userName: string;
+    name: string;
+    followers: number;
+    isVerified: boolean;
+    isBlueVerified: boolean;
+  };
   conversation_id?: string;
   in_reply_to_user_id?: string;
-  referenced_tweets?: Array<{
-    type: 'retweeted' | 'quoted' | 'replied_to';
-    id: string;
-  }>;
+  retweetCount?: number;
+  replyCount?: number;
+  likeCount?: number;
+  quoteCount?: number;
+  viewCount?: number;
   entities?: {
-    mentions?: Array<{
-      start: number;
-      end: number;
-      username: string;
-      id: string;
-    }>;
-    urls?: Array<{
-      start: number;
-      end: number;
-      url: string;
-      expanded_url: string;
-      display_url: string;
-    }>;
-    hashtags?: Array<{
-      start: number;
-      end: number;
-      tag: string;
+    user_mentions?: Array<{
+      id_str: string;
+      indices: number[];
+      name: string;
+      screen_name: string;
     }>;
   };
   public_metrics?: {
@@ -56,7 +54,12 @@ export interface TwitterTweet {
 }
 
 export interface TwitterSearchResponse {
-  data?: TwitterTweet[];
+  tweets?: TwitterTweet[]; // Actual API field
+  data?: TwitterTweet[]; // Legacy field for compatibility
+  has_next_page?: boolean;
+  next_cursor?: string;
+  status?: string;
+  msg?: string;
   includes?: {
     users?: TwitterUser[];
   };

@@ -43,12 +43,15 @@ async function fetchAndProcessMentions() {
       sinceTime,
     });
 
-    if (!response.data || response.data.length === 0) {
+    // Handle both API response formats
+    const mentions = response.tweets || response.data || [];
+    
+    if (mentions.length === 0) {
       console.log('✅ No new mentions found');
       return;
     }
 
-    console.log(`📊 Found ${response.data.length} new mentions`);
+    console.log(`📊 Found ${mentions.length} new mentions`);
     console.log('');
 
     // 3. Process each mention
@@ -56,17 +59,28 @@ async function fetchAndProcessMentions() {
     let skippedCount = 0;
     let errorCount = 0;
 
-    for (const tweet of response.data) {
+    for (const tweet of mentions) {
       try {
+        // Get author ID from either new or legacy format
+        const authorId = tweet.author?.id || tweet.author_id;
+        const authorUsername = tweet.author?.userName || 'unknown';
+        const createdAt = tweet.createdAt || tweet.created_at;
+        
+        if (!authorId) {
+          console.log(`\n⚠️  Tweet ${tweet.id} missing author ID, skipping`);
+          skippedCount++;
+          continue;
+        }
+
         console.log(`\n🐦 Processing tweet ${tweet.id}`);
-        console.log(`   Author: @${tweet.author_id}`);
+        console.log(`   Author: @${authorUsername} (ID: ${authorId})`);
         console.log(`   Text: ${tweet.text.substring(0, 100)}...`);
 
         // Find user by Twitter ID
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.twitterId, tweet.author_id))
+          .where(eq(users.twitterId, authorId))
           .limit(1);
 
         if (!user) {
@@ -86,16 +100,21 @@ async function fetchAndProcessMentions() {
           continue;
         }
 
-        // Calculate quality score
+        // Calculate quality score (use new or legacy format)
+        const likes = tweet.likeCount ?? tweet.public_metrics?.like_count ?? 0;
+        const retweets = tweet.retweetCount ?? tweet.public_metrics?.retweet_count ?? 0;
+        const replies = tweet.replyCount ?? tweet.public_metrics?.reply_count ?? 0;
+        const quotes = tweet.quoteCount ?? tweet.public_metrics?.quote_count ?? 0;
+        
         const score = calculateQualityScore({
           text: tweet.text,
-          likes: tweet.public_metrics?.like_count || 0,
-          retweets: tweet.public_metrics?.retweet_count || 0,
-          replies: tweet.public_metrics?.reply_count || 0,
-          quotes: tweet.public_metrics?.quote_count || 0,
-          hasImage: (tweet.entities?.urls?.length || 0) > 0,
-          hasVideo: false, // TwitterAPI.io may not provide this easily
-          hasHashtags: (tweet.entities?.hashtags?.length || 0) > 0,
+          likes,
+          retweets,
+          replies,
+          quotes,
+          hasImage: false, // TODO: Detect from entities if available
+          hasVideo: false,
+          hasHashtags: tweet.text.includes('#'),
         });
 
         console.log(`   📈 Quality Score: ${score.totalScore}/100`);
@@ -107,15 +126,15 @@ async function fetchAndProcessMentions() {
           tweetId: tweet.id,
           tweetUrl: `https://twitter.com/i/web/status/${tweet.id}`,
           content: tweet.text,
-          hasImage: (tweet.entities?.urls?.length || 0) > 0,
+          hasImage: false,
           hasVideo: false,
-          likes: tweet.public_metrics?.like_count || 0,
-          retweets: tweet.public_metrics?.retweet_count || 0,
-          replies: tweet.public_metrics?.reply_count || 0,
-          impressions: tweet.public_metrics?.impression_count || 0,
+          likes,
+          retweets,
+          replies,
+          impressions: tweet.viewCount ?? tweet.public_metrics?.impression_count ?? 0,
           qualityScore: score.totalScore,
           pointsAwarded: score.totalScore,
-          createdAt: new Date(tweet.created_at),
+          createdAt: new Date(createdAt!),
           metadata: score.breakdown as any,
         });
 
@@ -144,7 +163,7 @@ async function fetchAndProcessMentions() {
     console.log(`✅ Processed: ${processedCount}`);
     console.log(`⏭️  Skipped: ${skippedCount}`);
     console.log(`❌ Errors: ${errorCount}`);
-    console.log(`📝 Total mentions found: ${response.data.length}`);
+    console.log(`📝 Total mentions found: ${mentions.length}`);
     console.log('═══════════════════════════════════════');
   } catch (error) {
     console.error('');
