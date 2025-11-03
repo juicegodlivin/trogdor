@@ -6,18 +6,16 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is not set');
 }
 
-// Supabase pooler requires prepare: false
 const connectionString = process.env.DATABASE_URL;
 
 // For migrations
 export const migrationClient = postgres(connectionString, { 
   max: 1,
-  prepare: false, // Required for Supabase transaction pooler
 });
 
-// For queries
+// For queries - Supavisor (new pooler) works with default settings
 const queryClient = postgres(connectionString, {
-  prepare: false, // Required for Supabase transaction pooler
+  max: 10,
 });
 
 export const db = drizzle(queryClient, { schema });
