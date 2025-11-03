@@ -114,10 +114,18 @@ export class TwitterApiClient {
   }
 
   /**
-   * Get user information by username
+   * Get user information by username (screen name)
+   * Returns user info including their Twitter ID
    */
   async getUserByUsername(username: string): Promise<{ data: TwitterUser }> {
-    const endpoint = `/twitter/user/by-username/${username}`;
+    // Remove @ if present
+    const cleanUsername = username.replace('@', '');
+    
+    const params = new URLSearchParams({
+      userName: cleanUsername,
+    });
+
+    const endpoint = `/twitter/user/info?${params.toString()}`;
     return this.request<{ data: TwitterUser }>(endpoint);
   }
 

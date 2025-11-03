@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { router, protectedProcedure } from '../trpc';
 import { users, twitterMentions, generatedImages } from '@/lib/db/schema';
 import { eq, sql, desc, ne } from 'drizzle-orm';
+import { getTwitterApi } from '@/lib/api/twitter';
 
 export const userRouter = router({
   // Get user profile with stats
@@ -101,30 +102,73 @@ export const userRouter = router({
       // Remove @ symbol if user included it
       const cleanUsername = input.twitterUsername.replace(/^@/, '');
 
-      // Check if username is already taken by another user
-      const existingUsers = await ctx.db
-        .select()
-        .from(users)
-        .where(eq(users.twitterHandle, cleanUsername))
-        .limit(2);
-      
-      const existingUser = existingUsers.find(u => u.id !== ctx.session.user.id);
+      try {
+        // Fetch user info from Twitter API to get their ID
+        console.log(`🔍 Looking up Twitter user: @${cleanUsername}`);
+        const twitterApi = getTwitterApi();
+        const response = await twitterApi.getUserByUsername(cleanUsername);
+        
+        if (!response.data) {
+          throw new Error('Twitter user not found. Please check the username and try again.');
+        }
 
-      if (existingUser) {
-        throw new Error('This Twitter username is already linked to another wallet');
+        const twitterId = response.data.id;
+        const twitterName = response.data.name;
+        
+        console.log(`✅ Found Twitter user: @${cleanUsername} (ID: ${twitterId})`);
+
+        // Check if this Twitter ID is already linked to another wallet
+        const existingUserWithId = await ctx.db
+          .select()
+          .from(users)
+          .where(eq(users.twitterId, twitterId))
+          .limit(1);
+
+        if (existingUserWithId.length > 0 && existingUserWithId[0].id !== ctx.session.user.id) {
+          throw new Error('This Twitter account is already linked to another wallet');
+        }
+
+        // Check if username is already taken by another user (legacy check)
+        const existingUsers = await ctx.db
+          .select()
+          .from(users)
+          .where(eq(users.twitterHandle, cleanUsername))
+          .limit(2);
+        
+        const existingUser = existingUsers.find(u => u.id !== ctx.session.user.id);
+
+        if (existingUser && existingUser.twitterId !== twitterId) {
+          throw new Error('This Twitter username is already linked to another wallet');
+        }
+
+        // Update user's Twitter info - now includes ID!
+        const [updated] = await ctx.db
+          .update(users)
+          .set({ 
+            twitterHandle: cleanUsername,
+            twitterId: twitterId,
+            username: twitterName || cleanUsername, // Use real name if available
+          })
+          .where(eq(users.id, ctx.session.user.id))
+          .returning();
+
+        console.log(`✅ Linked Twitter account @${cleanUsername} to wallet ${ctx.session.user.walletAddress}`);
+
+        return updated;
+      } catch (error: any) {
+        console.error('Twitter linking error:', error);
+        
+        // Provide user-friendly error messages
+        if (error.message.includes('not found') || error.message.includes('Not Found')) {
+          throw new Error(`Twitter user @${cleanUsername} not found. Please check the username.`);
+        }
+        
+        if (error.message.includes('already linked')) {
+          throw error; // Pass through our custom error
+        }
+        
+        throw new Error('Failed to link Twitter account. Please try again.');
       }
-
-      // Update user's Twitter username
-      const [updated] = await ctx.db
-        .update(users)
-        .set({ 
-          twitterHandle: cleanUsername,
-          username: cleanUsername,
-        })
-        .where(eq(users.id, ctx.session.user.id))
-        .returning();
-
-      return updated;
     }),
 
   // Get user's leaderboard position
