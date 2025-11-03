@@ -15,10 +15,10 @@ export class TwitterApiClient {
   private baseUrl = 'https://api.twitterapi.io';
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.TWITTERAPI_IO_API_KEY || '';
+    this.apiKey = apiKey || process.env.TWITTER_API_KEY || '';
     
     if (!this.apiKey) {
-      throw new Error('TwitterAPI.io API key is required');
+      throw new Error('TWITTER_API_KEY environment variable is required');
     }
   }
 
