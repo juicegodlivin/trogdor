@@ -36,8 +36,12 @@ const queryClient = postgres(connectionString, {
 
 // Initialize database tables if they don't exist
 async function initializeTables() {
+  console.log('🔄 Checking database tables...');
+  console.log('Environment: VERCEL=' + process.env.VERCEL + ', NODE_ENV=' + process.env.NODE_ENV);
+  
   try {
     // Check if users table exists
+    console.log('📋 Querying information_schema...');
     const result = await queryClient`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -45,6 +49,8 @@ async function initializeTables() {
         AND table_name = 'users'
       );
     `;
+    
+    console.log('Query result:', result);
     
     if (!result[0]?.exists) {
       console.log('⚠️ Tables not found, creating schema...');
@@ -69,25 +75,29 @@ async function initializeTables() {
           metadata JSONB
         );
       `;
+      console.log('✅ Users table created');
       
       await queryClient`CREATE INDEX IF NOT EXISTS wallet_idx ON users(wallet_address);`;
       await queryClient`CREATE INDEX IF NOT EXISTS twitter_id_idx ON users(twitter_id);`;
       await queryClient`CREATE INDEX IF NOT EXISTS rank_idx ON users(current_rank);`;
+      console.log('✅ Indexes created');
       
       console.log('✅ Database tables created successfully');
     } else {
       console.log('✅ Database tables exist');
     }
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('❌ Database initialization error:', error);
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     // Don't throw - allow app to start and show errors later
   }
 }
 
-// Run initialization in production/vercel
-if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-  initializeTables().catch(console.error);
-}
+// Run initialization - ALWAYS run to ensure tables exist
+console.log('🚀 Starting database initialization...');
+initializeTables().catch((err) => {
+  console.error('Fatal initialization error:', err);
+});
 
 export const db = drizzle(queryClient, { schema });
 
