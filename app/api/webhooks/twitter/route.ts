@@ -138,15 +138,18 @@ async function processWebhookEvent(eventId: string, payload: TwitterWebhookPaylo
       .values({
         userId: user.id,
         tweetId: payload.id,
+        tweetUrl: `https://twitter.com/i/web/status/${payload.id}`,
         content: payload.text,
+        hasImage: (payload.entities?.urls?.length || 0) > 0,
+        hasVideo: false, // Would need media objects to determine
+        likes: payload.public_metrics?.like_count || 0,
+        retweets: payload.public_metrics?.retweet_count || 0,
+        replies: payload.public_metrics?.reply_count || 0,
+        impressions: 0, // Not available in basic Twitter webhook payload
         qualityScore: score.totalScore,
-        metrics: {
-          likes: payload.public_metrics?.like_count || 0,
-          retweets: payload.public_metrics?.retweet_count || 0,
-          replies: payload.public_metrics?.reply_count || 0,
-          quotes: payload.public_metrics?.quote_count || 0,
-        },
-        scoringDetails: score.breakdown,
+        pointsAwarded: score.totalScore,
+        createdAt: new Date(payload.created_at),
+        metadata: score.breakdown as any,
       })
       .onConflictDoNothing() // Ignore if tweet already exists
       .returning();
