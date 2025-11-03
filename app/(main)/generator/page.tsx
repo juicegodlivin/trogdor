@@ -209,7 +209,7 @@ export default function GeneratorPage() {
               <h3 className="font-hand text-2xl">Prompt Ideas</h3>
             </div>
             <p className="text-pencil mb-4">
-              Just describe what you want Trogdor to burninate! The AI automatically adds Trogdor's 
+              Just describe what you want Trogdor to burninate! The AI automatically adds Trogdor&apos;s 
               character details and style. Focus on the <strong>scene and action</strong>:
             </p>
             <div className="grid md:grid-cols-2 gap-3">
@@ -244,7 +244,7 @@ export default function GeneratorPage() {
               <li className="flex items-start">
                 <span className="font-hand text-xl mr-3">1.</span>
                 <span>
-                  <strong>Connect your Solana wallet</strong> to prove you're a true cult member
+                  <strong>Connect your Solana wallet</strong> to prove you&apos;re a true cult member
                 </span>
               </li>
               <li className="flex items-start">

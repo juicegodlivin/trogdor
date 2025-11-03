@@ -17,7 +17,7 @@ export default function HistoryPage() {
             </h1>
           </div>
           <p className="text-xl text-pencil max-w-3xl mx-auto">
-            From a simple email on January 13, 2003, Trogdor emerged from Strong Bad's 
+            From a simple email on January 13, 2003, Trogdor emerged from Strong Bad&apos;s 
             imagination to burninate the countryside and capture hearts worldwide.
           </p>
         </div>
@@ -37,16 +37,16 @@ export default function HistoryPage() {
               What follows is a masterclass in improvisational character design:
             </p>
             <ol className="space-y-2 list-decimal list-inside">
-              <li className="text-pencil">First, draw an 'S' for Snake... or Dragon...</li>
-              <li className="text-pencil">Then a more different 'S'</li>
-              <li className="text-pencil">Consummate V's for teeth</li>
+              <li className="text-pencil">First, draw an &apos;S&apos; for Snake... or Dragon...</li>
+              <li className="text-pencil">Then a more different &apos;S&apos;</li>
+              <li className="text-pencil">Consummate V&apos;s for teeth</li>
               <li className="text-pencil">Add spinities along the back</li>
               <li className="text-pencil">Give him a beefy arm for good measure</li>
             </ol>
             <div className="mt-6 p-4 bg-yellow-50 border-sketch">
               <p className="font-hand text-2xl italic">
-                "TROGDOR WAS A MAN! I mean, he was a dragon-man! 
-                Or maybe he was just a dragon... But he was still TROGDOR!"
+                &quot;TROGDOR WAS A MAN! I mean, he was a dragon-man! 
+                Or maybe he was just a dragon... But he was still TROGDOR!&quot;
               </p>
             </div>
           </TimelineSection>
@@ -61,7 +61,7 @@ export default function HistoryPage() {
           >
             <p className="mb-4">
               The Brothers Chaps released the full <strong>Trogdor Theme Song</strong>, 
-              turning a simple joke into internet folklore. The song details Trogdor's 
+              turning a simple joke into internet folklore. The song details Trogdor&apos;s 
               legendary exploits:
             </p>
             <div className="space-y-3 text-lg">
@@ -98,13 +98,13 @@ export default function HistoryPage() {
               <li className="flex items-start">
                 <span className="text-accent-green mr-3 text-xl">→</span>
                 <span>
-                  <strong>Guitar Hero II</strong> featured "Trogdor" as an unlockable bonus track
+                  <strong>Guitar Hero II</strong> featured &quot;Trogdor&quot; as an unlockable bonus track
                 </span>
               </li>
               <li className="flex items-start">
                 <span className="text-accent-green mr-3 text-xl">→</span>
                 <span>
-                  Appeared in <strong>multiple video games</strong> including "Peasant's Quest"
+                  Appeared in <strong>multiple video games</strong> including &quot;Peasant&apos;s Quest&quot;
                 </span>
               </li>
               <li className="flex items-start">
