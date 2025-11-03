@@ -46,6 +46,18 @@ export default function DashboardPage() {
     },
   });
 
+  // Unlink Twitter mutation
+  const unlinkTwitterMutation = trpc.user.unlinkTwitter.useMutation({
+    onSuccess: () => {
+      setLinkError('');
+      // Refetch profile to show unlinked state
+      refetchProfile();
+    },
+    onError: (error) => {
+      setLinkError(error.message);
+    },
+  });
+
   // Redirect to home if not authenticated
   if (status === 'loading') {
     return (
@@ -124,14 +136,28 @@ export default function DashboardPage() {
                   X (Twitter) Account
                 </label>
                 {isTwitterLinked ? (
-                  <div className="flex items-center gap-2 p-3 bg-accent-green/20 border-sketch">
-                    <MedievalIcon name="flag" size={24} />
-                    <div>
-                      <div className="font-medium">
-                        @{profile.twitterUsername}
+                  <div>
+                    <div className="flex items-center gap-2 p-3 bg-accent-green/20 border-sketch">
+                      <MedievalIcon name="flag" size={24} />
+                      <div className="flex-1">
+                        <div className="font-medium">
+                          @{profile.twitterUsername}
+                        </div>
+                        <div className="text-xs text-pencil-light">Linked</div>
                       </div>
-                      <div className="text-xs text-pencil-light">Linked</div>
+                      <button
+                        onClick={() => unlinkTwitterMutation.mutate()}
+                        disabled={unlinkTwitterMutation.isLoading}
+                        className="btn-sketch px-3 py-1 text-xs bg-accent-red text-white hover:bg-accent-red/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {unlinkTwitterMutation.isLoading ? 'Unlinking...' : 'Unlink'}
+                      </button>
                     </div>
+                    {linkError && (
+                      <div className="mt-2 text-xs text-accent-red">
+                        {linkError}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div>

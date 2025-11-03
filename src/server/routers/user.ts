@@ -171,6 +171,22 @@ export const userRouter = router({
       }
     }),
 
+  // Unlink Twitter account
+  unlinkTwitter: protectedProcedure.mutation(async ({ ctx }) => {
+    const [updated] = await ctx.db
+      .update(users)
+      .set({
+        twitterHandle: null,
+        twitterId: null,
+      })
+      .where(eq(users.id, ctx.session.user.id))
+      .returning();
+
+    console.log(`✅ Unlinked Twitter account from wallet ${ctx.session.user.walletAddress}`);
+
+    return updated;
+  }),
+
   // Get user's leaderboard position
   getLeaderboardPosition: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;
