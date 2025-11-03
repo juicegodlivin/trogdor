@@ -13,7 +13,8 @@
     "db:migrate-prod": "tsx scripts/migrate-production.ts",
     "db:studio": "drizzle-kit studio",
     "setup:webhooks": "tsx scripts/setup-webhooks.ts",
-    "train-lora": "tsx scripts/train-trogdor-lora.ts"
+    "train-lora": "tsx scripts/train-trogdor-lora.ts",
+    "twitter:fetch": "tsx scripts/fetch-mentions.ts"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",
