@@ -36,56 +36,39 @@ const queryClient = postgres(connectionString, {
 
 // Initialize database tables if they don't exist
 async function initializeTables() {
-  console.log('🔄 Checking database tables...');
-  console.log('Environment: VERCEL=' + process.env.VERCEL + ', NODE_ENV=' + process.env.NODE_ENV);
+  console.log('🔄 Creating database tables (IF NOT EXISTS)...');
   
   try {
-    // Check if users table exists
-    console.log('📋 Querying information_schema...');
-    const result = await queryClient`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'users'
+    // Just create the table - IF NOT EXISTS makes this safe
+    console.log('📋 Creating users table...');
+    await queryClient`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        wallet_address TEXT NOT NULL UNIQUE,
+        username TEXT,
+        twitter_handle TEXT UNIQUE,
+        twitter_id TEXT UNIQUE,
+        twitter_access_token TEXT,
+        twitter_refresh_token TEXT,
+        twitter_token_expiry TIMESTAMP,
+        profile_image TEXT,
+        joined_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        last_active TIMESTAMP DEFAULT NOW(),
+        total_offerings INTEGER DEFAULT 0 NOT NULL,
+        current_rank INTEGER,
+        is_verified BOOLEAN DEFAULT FALSE,
+        metadata JSONB
       );
     `;
+    console.log('✅ Users table ready');
     
-    console.log('Query result:', result);
+    console.log('📋 Creating indexes...');
+    await queryClient`CREATE INDEX IF NOT EXISTS wallet_idx ON users(wallet_address);`;
+    await queryClient`CREATE INDEX IF NOT EXISTS twitter_id_idx ON users(twitter_id);`;
+    await queryClient`CREATE INDEX IF NOT EXISTS rank_idx ON users(current_rank);`;
+    console.log('✅ Indexes ready');
     
-    if (!result[0]?.exists) {
-      console.log('⚠️ Tables not found, creating schema...');
-      
-      // Create users table
-      await queryClient`
-        CREATE TABLE IF NOT EXISTS users (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          wallet_address TEXT NOT NULL UNIQUE,
-          username TEXT,
-          twitter_handle TEXT UNIQUE,
-          twitter_id TEXT UNIQUE,
-          twitter_access_token TEXT,
-          twitter_refresh_token TEXT,
-          twitter_token_expiry TIMESTAMP,
-          profile_image TEXT,
-          joined_at TIMESTAMP DEFAULT NOW() NOT NULL,
-          last_active TIMESTAMP DEFAULT NOW(),
-          total_offerings INTEGER DEFAULT 0 NOT NULL,
-          current_rank INTEGER,
-          is_verified BOOLEAN DEFAULT FALSE,
-          metadata JSONB
-        );
-      `;
-      console.log('✅ Users table created');
-      
-      await queryClient`CREATE INDEX IF NOT EXISTS wallet_idx ON users(wallet_address);`;
-      await queryClient`CREATE INDEX IF NOT EXISTS twitter_id_idx ON users(twitter_id);`;
-      await queryClient`CREATE INDEX IF NOT EXISTS rank_idx ON users(current_rank);`;
-      console.log('✅ Indexes created');
-      
-      console.log('✅ Database tables created successfully');
-    } else {
-      console.log('✅ Database tables exist');
-    }
+    console.log('✅ Database initialization complete');
   } catch (error) {
     console.error('❌ Database initialization error:', error);
     console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
