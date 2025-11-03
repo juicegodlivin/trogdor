@@ -30,6 +30,14 @@ const queryClient = postgres(connectionString, {
   idle_timeout: 20,
   max_lifetime: 60 * 30, // 30 minutes
   onnotice: () => {}, // Suppress notices
+  connect_timeout: 10, // 10 second connection timeout
+  ssl: connectionString.includes('pooler.supabase.com') ? 'require' : false, // Force SSL for Supabase pooler
+});
+
+// Test connection on init
+queryClient`SELECT 1 as test`.catch((err) => {
+  console.error('Database connection test failed:', err);
+  console.error('Check DATABASE_URL password and permissions');
 });
 
 export const db = drizzle(queryClient, { schema });
