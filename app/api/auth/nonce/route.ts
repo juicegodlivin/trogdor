@@ -8,7 +8,13 @@ export async function GET() {
     
     // Store nonce in Redis with 5 minute expiration
     if (redis) {
-      await redis.setex(`nonce:pending:${nonce}`, 300, '1');
+      try {
+        await redis.setex(`nonce:pending:${nonce}`, 300, '1');
+      } catch (redisError) {
+        console.error('Redis error storing nonce:', redisError);
+        // Continue without Redis - nonce verification will be skipped
+        console.warn('⚠️ Nonce stored locally only, Redis unavailable');
+      }
     }
     
     return NextResponse.json({ nonce });

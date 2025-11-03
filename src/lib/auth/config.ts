@@ -42,17 +42,23 @@ export const authOptions = {
           // Verify nonce hasn't been used (extract from message)
           const nonceMatch = message.match(/nonce: ([a-z0-9]+)/i);
           if (nonceMatch && redis) {
-            const nonce = nonceMatch[1];
-            const nonceExists = await redis.get(`nonce:pending:${nonce}`);
-            
-            if (!nonceExists) {
-              console.error('Invalid or expired nonce');
-              return null;
+            try {
+              const nonce = nonceMatch[1];
+              const nonceExists = await redis.get(`nonce:pending:${nonce}`);
+              
+              if (!nonceExists) {
+                console.error('Invalid or expired nonce');
+                return null;
+              }
+              
+              // Mark nonce as used
+              await redis.del(`nonce:pending:${nonce}`);
+              await redis.setex(`nonce:used:${nonce}`, 3600, '1'); // Store for 1 hour
+            } catch (redisError) {
+              console.error('Redis error during nonce verification:', redisError);
+              // Continue without nonce verification if Redis fails
+              console.warn('⚠️ Nonce verification skipped due to Redis error');
             }
-            
-            // Mark nonce as used
-            await redis.del(`nonce:pending:${nonce}`);
-            await redis.setex(`nonce:used:${nonce}`, 3600, '1'); // Store for 1 hour
           }
 
           // Find or create user
@@ -61,7 +67,11 @@ export const authOptions = {
             .select()
             .from(users)
             .where(eq(users.walletAddress, walletAddress))
-            .limit(1);
+            .limit(1)
+            .catch((err) => {
+              console.error('Database error during user lookup:', err);
+              throw err;
+            });
 
           if (!user) {
             // Create new user
@@ -72,13 +82,21 @@ export const authOptions = {
                 joinedAt: new Date(),
                 lastActive: new Date(),
               })
-              .returning();
+              .returning()
+              .catch((err) => {
+                console.error('Database error during user creation:', err);
+                throw err;
+              });
           } else {
             // Update last active
             await db
               .update(users)
               .set({ lastActive: new Date() })
-              .where(eq(users.id, user.id));
+              .where(eq(users.id, user.id))
+              .catch((err) => {
+                console.error('Database error during user update:', err);
+                // Don't throw - last active update is not critical
+              });
           }
 
           return {
