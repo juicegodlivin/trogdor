@@ -55,7 +55,8 @@ export const leaderboardRouter = router({
         return leaderboard;
       } catch (error) {
         console.error('Error fetching leaderboard:', error);
-        throw new Error('Failed to fetch leaderboard data');
+        console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        throw error;
       }
     }),
 
@@ -70,7 +71,8 @@ export const leaderboardRouter = router({
       return topTen;
     } catch (error) {
       console.error('Error fetching top ten leaderboard:', error);
-      throw new Error('Failed to fetch leaderboard data');
+      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      throw error;
     }
   }),
 });
