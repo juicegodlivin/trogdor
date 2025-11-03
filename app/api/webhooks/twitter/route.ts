@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { twitterMentions, webhookEvents, users } from '@/lib/db/schema';
 import { redis } from '@/lib/redis';
 import { calculateQualityScore } from '@/lib/utils/scoring';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import crypto from 'crypto';
 
 // Types for Twitter webhook payload
@@ -61,12 +61,12 @@ async function processWebhookEvent(eventId: string, payload: TwitterWebhookPaylo
   const existingEvent = await db.query.webhookEvents.findFirst({
     where: (events, { eq, and }) =>
       and(
-        eq(events.eventId, eventId),
+        eq(events.webhookId, eventId),
         eq(events.eventType, 'twitter.mention')
       ),
   });
 
-  if (existingEvent && existingEvent.status === 'processed') {
+  if (existingEvent && existingEvent.processed) {
     console.log(`[Webhook] Event ${eventId} already processed (Database)`);
     
     // Update Redis cache
@@ -81,17 +81,17 @@ async function processWebhookEvent(eventId: string, payload: TwitterWebhookPaylo
   const [webhookEvent] = await db
     .insert(webhookEvents)
     .values({
-      eventId,
+      webhookId: eventId,
+      source: 'twitter',
       eventType: 'twitter.mention',
       payload,
-      status: 'processing',
+      processed: false,
     })
     .onConflictDoUpdate({
-      target: webhookEvents.eventId,
+      target: webhookEvents.webhookId,
       set: {
-        status: 'processing',
-        attempts: db.raw('attempts + 1'),
-        lastAttemptAt: new Date(),
+        processed: false,
+        retryCount: sql`${webhookEvents.retryCount} + 1`,
       },
     })
     .returning();
@@ -123,9 +123,9 @@ async function processWebhookEvent(eventId: string, payload: TwitterWebhookPaylo
       await db
         .update(webhookEvents)
         .set({
-          status: 'processed',
+          processed: true,
           processedAt: new Date(),
-          metadata: { reason: 'user_not_found' },
+          error: 'user_not_found',
         })
         .where(eq(webhookEvents.id, webhookEvent.id));
 
@@ -155,7 +155,7 @@ async function processWebhookEvent(eventId: string, payload: TwitterWebhookPaylo
     await db
       .update(webhookEvents)
       .set({
-        status: 'processed',
+        processed: true,
         processedAt: new Date(),
       })
       .where(eq(webhookEvents.id, webhookEvent.id));
@@ -182,9 +182,8 @@ async function processWebhookEvent(eventId: string, payload: TwitterWebhookPaylo
     await db
       .update(webhookEvents)
       .set({
-        status: 'failed',
-        lastAttemptAt: new Date(),
-        metadata: { error: String(error) },
+        processed: false,
+        error: String(error),
       })
       .where(eq(webhookEvents.id, webhookEvent.id));
 
