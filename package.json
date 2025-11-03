@@ -14,7 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "setup:webhooks": "tsx scripts/setup-webhooks.ts",
     "train-lora": "tsx scripts/train-trogdor-lora.ts",
-    "twitter:fetch": "tsx scripts/fetch-mentions.ts"
+    "twitter:fetch": "tsx --env-file=.env.local scripts/fetch-mentions.ts"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",
