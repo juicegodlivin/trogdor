@@ -6,8 +6,10 @@ import { MedievalIcon } from '@/components/ui/MedievalIcon';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc/client';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { users } from '@/lib/db/schema';
 
 type Period = 'alltime' | 'monthly' | 'weekly' | 'daily';
+type User = typeof users.$inferSelect;
 
 export default function LeaderboardPage() {
   const [period, setPeriod] = useState<Period>('alltime');
@@ -111,7 +113,7 @@ export default function LeaderboardPage() {
               </thead>
               <tbody>
                 {leaderboard && leaderboard.length > 0 ? (
-                  leaderboard.map((user, idx) => {
+                  leaderboard.map((user: User, idx: number) => {
                     const rank = (page - 1) * 50 + idx + 1;
                     return (
                       <tr
