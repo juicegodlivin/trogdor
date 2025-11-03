@@ -21,12 +21,17 @@ export const authOptions = {
           return null;
         }
 
+        // Type assertion for credentials
+        const publicKey = credentials.publicKey as string;
+        const signature = credentials.signature as string;
+        const message = credentials.message as string;
+
         try {
           // Verify the signature
           const isValid = await verifyWalletSignature(
-            credentials.publicKey,
-            credentials.signature,
-            credentials.message
+            publicKey,
+            signature,
+            message
           );
 
           if (!isValid) {
@@ -35,7 +40,7 @@ export const authOptions = {
           }
 
           // Verify nonce hasn't been used (extract from message)
-          const nonceMatch = credentials.message.match(/nonce: ([a-z0-9]+)/i);
+          const nonceMatch = message.match(/nonce: ([a-z0-9]+)/i);
           if (nonceMatch && redis) {
             const nonce = nonceMatch[1];
             const nonceExists = await redis.get(`nonce:pending:${nonce}`);
@@ -51,7 +56,7 @@ export const authOptions = {
           }
 
           // Find or create user
-          const walletAddress = credentials.publicKey.toLowerCase();
+          const walletAddress = publicKey.toLowerCase();
           let [user] = await db
             .select()
             .from(users)
