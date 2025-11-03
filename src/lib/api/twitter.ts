@@ -31,6 +31,8 @@ export class TwitterApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
+    console.log(`🌐 Twitter API Request: ${url}`);
+    
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -49,11 +51,13 @@ export class TwitterApiClient {
       
       try {
         const errorData = await response.json();
+        console.error('API Error Response:', errorData);
         error.message = errorData.message || error.message;
       } catch (e) {
-        // Use default error message
+        console.error('Failed to parse error response');
       }
       
+      console.error(`❌ Request failed: ${url}`);
       throw new Error(error.message);
     }
 
@@ -61,41 +65,36 @@ export class TwitterApiClient {
   }
 
   /**
-   * Search for tweets mentioning a specific account
-   * @param username - The username to search mentions for (without @)
+   * Get tweets mentioning a specific user
+   * @param username - The username to get mentions for (without @)
    * @param options - Search options
    */
   async searchMentions(
     username: string,
     options: {
-      maxResults?: number;
-      sinceId?: string;
-      startTime?: string;
-      endTime?: string;
+      cursor?: string;
+      sinceTime?: number; // Unix timestamp in seconds
+      untilTime?: number; // Unix timestamp in seconds
     } = {}
   ): Promise<TwitterSearchResponse> {
     const params = new URLSearchParams({
-      query: `@${username}`,
-      'tweet.fields': 'id,text,author_id,created_at,entities,public_metrics,referenced_tweets',
-      'user.fields': 'id,username,name,verified,public_metrics',
-      expansions: 'author_id',
-      max_results: (options.maxResults || 100).toString(),
+      userName: username,
     });
 
-    if (options.sinceId) {
-      params.append('since_id', options.sinceId);
+    if (options.cursor) {
+      params.append('cursor', options.cursor);
     }
     
-    if (options.startTime) {
-      params.append('start_time', options.startTime);
+    if (options.sinceTime) {
+      params.append('sinceTime', options.sinceTime.toString());
     }
     
-    if (options.endTime) {
-      params.append('end_time', options.endTime);
+    if (options.untilTime) {
+      params.append('untilTime', options.untilTime.toString());
     }
 
-    // TwitterAPI.io endpoint - may need adjustment based on their actual API
-    const endpoint = `/twitter/search/recent?${params.toString()}`;
+    // TwitterAPI.io mentions endpoint
+    const endpoint = `/twitter/user/mentions?${params.toString()}`;
     
     return this.request<TwitterSearchResponse>(endpoint);
   }

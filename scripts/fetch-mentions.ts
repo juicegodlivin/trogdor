@@ -32,9 +32,15 @@ async function fetchAndProcessMentions() {
 
     // 2. Fetch mentions from TwitterAPI.io
     console.log('🔍 Fetching mentions from TwitterAPI.io...');
+    
+    // Calculate sinceTime from last tweet if available
+    let sinceTime: number | undefined;
+    if (lastMention) {
+      sinceTime = Math.floor(new Date(lastMention.createdAt).getTime() / 1000);
+    }
+    
     const response = await twitterApi.searchMentions(TWITTER_ACCOUNT, {
-      maxResults: 100,
-      sinceId,
+      sinceTime,
     });
 
     if (!response.data || response.data.length === 0) {
