@@ -34,11 +34,60 @@ const queryClient = postgres(connectionString, {
   ssl: connectionString.includes('pooler.supabase.com') ? 'require' : false, // Force SSL for Supabase pooler
 });
 
-// Test connection on init
-queryClient`SELECT 1 as test`.catch((err) => {
-  console.error('Database connection test failed:', err);
-  console.error('Check DATABASE_URL password and permissions');
-});
+// Initialize database tables if they don't exist
+async function initializeTables() {
+  try {
+    // Check if users table exists
+    const result = await queryClient`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `;
+    
+    if (!result[0]?.exists) {
+      console.log('⚠️ Tables not found, creating schema...');
+      
+      // Create users table
+      await queryClient`
+        CREATE TABLE IF NOT EXISTS users (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          wallet_address TEXT NOT NULL UNIQUE,
+          username TEXT,
+          twitter_handle TEXT UNIQUE,
+          twitter_id TEXT UNIQUE,
+          twitter_access_token TEXT,
+          twitter_refresh_token TEXT,
+          twitter_token_expiry TIMESTAMP,
+          profile_image TEXT,
+          joined_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          last_active TIMESTAMP DEFAULT NOW(),
+          total_offerings INTEGER DEFAULT 0 NOT NULL,
+          current_rank INTEGER,
+          is_verified BOOLEAN DEFAULT FALSE,
+          metadata JSONB
+        );
+      `;
+      
+      await queryClient`CREATE INDEX IF NOT EXISTS wallet_idx ON users(wallet_address);`;
+      await queryClient`CREATE INDEX IF NOT EXISTS twitter_id_idx ON users(twitter_id);`;
+      await queryClient`CREATE INDEX IF NOT EXISTS rank_idx ON users(current_rank);`;
+      
+      console.log('✅ Database tables created successfully');
+    } else {
+      console.log('✅ Database tables exist');
+    }
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    // Don't throw - allow app to start and show errors later
+  }
+}
+
+// Run initialization in production/vercel
+if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+  initializeTables().catch(console.error);
+}
 
 export const db = drizzle(queryClient, { schema });
 

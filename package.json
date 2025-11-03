@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate:pg",
     "db:migrate": "drizzle-kit push:pg",
+    "db:migrate-prod": "tsx scripts/migrate-production.ts",
     "db:studio": "drizzle-kit studio",
     "setup:webhooks": "tsx scripts/setup-webhooks.ts",
     "train-lora": "tsx scripts/train-trogdor-lora.ts"
