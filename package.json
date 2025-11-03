@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit push:pg",
     "db:migrate-prod": "tsx scripts/migrate-production.ts",
     "db:studio": "drizzle-kit studio",
+    "db:verify": "npx tsx --env-file=.env.local scripts/verify-db-tables.ts",
     "setup:webhooks": "tsx scripts/setup-webhooks.ts",
     "train-lora": "tsx scripts/train-trogdor-lora.ts",
     "twitter:fetch": "tsx --env-file=.env.local scripts/fetch-mentions.ts"
