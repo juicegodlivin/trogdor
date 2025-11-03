@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --notebook-line: #D1D5DB;
+    --notebook-margin: #EF4444;
+  }
+  
+  body {
+    @apply bg-white text-foreground;
+    font-feature-settings: "cv05", "cv09";
+  }
+}
+
+@layer components {
+  /* Hand-drawn border effect */
+  .border-sketch {
+    border: 2px solid currentColor;
+    border-radius: 2px;
+    background: #FFFFFF;
+    box-shadow: 
+      0 2px 8px rgba(0,0,0,0.08),
+      0 1px 2px rgba(0,0,0,0.05);
+  }
+  
+  /* Clean white background - sketchpad style */
+  .notebook-paper {
+    background: #FFFFFF;
+    position: relative;
+  }
+  
+  /* Hand-drawn button */
+  .btn-sketch {
+    @apply px-4 py-2 border-2 border-pencil font-hand text-lg;
+    @apply hover:shadow-sketch-lg transition-all duration-150;
+    @apply active:translate-y-0.5;
+    position: relative;
+  }
+  
+  .btn-sketch::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  
+  .btn-sketch:hover::before {
+    opacity: 0.3;
+  }
+  
+  /* Trogdor flame effect */
+  .flame-text {
+    background: linear-gradient(45deg, #EF4444, #F59E0B, #EF4444);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: flame 2s ease infinite;
+  }
+  
+  @keyframes flame {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  
+  /* Card styles with solid backgrounds */
+  .card-sketch {
+    @apply bg-white border-2 border-pencil rounded-sketch p-6;
+    box-shadow: 
+      0 4px 12px rgba(0,0,0,0.08),
+      0 2px 4px rgba(0,0,0,0.05);
+  }
+  
+  .card-sketch:hover {
+    box-shadow: 
+      0 6px 16px rgba(0,0,0,0.12),
+      0 3px 6px rgba(0,0,0,0.08);
+  }
+  
+  /* Hero card - slightly elevated */
+  .hero-card {
+    @apply bg-white border-2 border-pencil;
+    box-shadow: 
+      0 8px 24px rgba(0,0,0,0.1),
+      0 4px 8px rgba(0,0,0,0.06);
+  }
+}
+

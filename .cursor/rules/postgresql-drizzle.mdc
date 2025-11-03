@@ -1,0 +1,174 @@
+---# PostgreSQL & Drizzle ORM
+
+**Toggle when working with database schema, queries, migrations, or data models.**
+
+## Drizzle ORM Setup
+- Schema: src/lib/db/schema.ts
+- Client: src/lib/db/index.ts
+- Migrations: drizzle/migrations/
+- Config: drizzle.config.ts
+
+## Schema Definition Best Practices
+```typescript
+import { pgTable, serial, text, timestamp, integer, boolean, index } from 'drizzle-orm/pg-core';
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  walletAddress: text('wallet_address').notNull().unique(),
+  twitterId: text('twitter_id').unique(),
+  twitterUsername: text('twitter_username'),
+  totalOfferings: integer('total_offerings').default(0).notNull(),
+  qualityScore: integer('quality_score').default(0).notNull(),
+  rank: integer('rank'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  walletIdx: index('wallet_idx').on(table.walletAddress),
+  twitterIdx: index('twitter_idx').on(table.twitterId),
+  rankIdx: index('rank_idx').on(table.rank),
+}));
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+```
+
+## Query Patterns
+
+### Select with filters
+```typescript
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
+import { eq, desc, and, gte } from 'drizzle-orm';
+
+// Single record
+const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+
+// Multiple with conditions
+const topUsers = await db.select()
+  .from(users)
+  .where(and(
+    gte(users.totalOfferings, 10),
+    eq(users.rank, 1)
+  ))
+  .orderBy(desc(users.qualityScore))
+  .limit(10);
+```
+
+### Insert
+```typescript
+const [newUser] = await db.insert(users)
+  .values({
+    walletAddress: address,
+    twitterUsername: username,
+  })
+  .returning();
+```
+
+### Update
+```typescript
+const [updated] = await db.update(users)
+  .set({ 
+    totalOfferings: user.totalOfferings + points,
+    updatedAt: new Date(),
+  })
+  .where(eq(users.id, userId))
+  .returning();
+```
+
+### Delete
+```typescript
+await db.delete(users).where(eq(users.id, userId));
+```
+
+### Transactions
+```typescript
+await db.transaction(async (tx) => {
+  // Award points
+  await tx.update(users)
+    .set({ totalOfferings: sql`${users.totalOfferings} + ${points}` })
+    .where(eq(users.id, userId));
+  
+  // Log offering
+  await tx.insert(offerings).values({
+    userId,
+    tweetId,
+    points,
+  });
+});
+```
+
+## Indexes Strategy
+- Primary keys: Automatic
+- Foreign keys: Always index
+- Frequently filtered columns: users.walletAddress, users.twitterId
+- ORDER BY columns: users.rank, users.totalOfferings
+- Composite for complex queries: (userId, createdAt)
+
+## Migrations
+```bash
+# Generate migration
+pnpm drizzle-kit generate:pg
+
+# Run migrations
+pnpm drizzle-kit push:pg
+
+# Check current state
+pnpm drizzle-kit introspect:pg
+```
+
+## Connection Pooling
+- Use Supabase Pooler or Neon connection pooling
+- Set max connections in DATABASE_URL params
+- Use DIRECT_URL for migrations
+
+## Type Safety
+- Export types: export type User = typeof users.$inferSelect;
+- Use inferred types everywhere
+- No any types in database operations
+- Validate foreign keys exist before insert
+
+## Performance Tips
+- Use .limit() on all queries that don't need all results
+- Index frequently queried columns
+- Use sql`` for raw SQL only when necessary
+- Batch operations in transactions
+- Cache frequently accessed data in Redis
+
+## Common Patterns
+- Soft deletes: Add deletedAt timestamp, filter in queries
+- Updated timestamps: Always set updatedAt on updates
+- Pagination: Use .limit().offset() or cursor-based
+- Full-text search: Use PostgreSQL tsvector columns
+- JSON columns: Use jsonb for flexible data
+
+## Error Handling
+```typescript
+try {
+  const user = await db.select().from(users).where(eq(users.id, id));
+  if (!user.length) throw new Error('User not found');
+  return user[0];
+} catch (error) {
+  if (error.code === '23505') {
+    // Unique constraint violation
+    throw new Error('User already exists');
+  }
+  throw error;
+}
+```
+
+## Schema Relationships
+```typescript
+export const offerings = pgTable('offerings', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  tweetId: text('tweet_id').notNull().unique(),
+  points: integer('points').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Join query
+const userWithOfferings = await db.select()
+  .from(users)
+  .leftJoin(offerings, eq(users.id, offerings.userId))
+  .where(eq(users.id, userId));
+```

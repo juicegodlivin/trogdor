@@ -1,0 +1,90 @@
+---# Web3 & Solana Integration
+
+**Toggle this rule when working on wallet connection, authentication, or blockchain interactions.**
+
+## Solana Web3 Setup
+- Use @solana/web3.js for blockchain interactions
+- Use @solana/wallet-adapter-react for wallet UI
+- Use @solana/wallet-adapter-wallets for multi-wallet support
+- RPC endpoint from environment: SOLANA_RPC_URL
+
+## Wallet Authentication Flow
+1. Generate nonce on server, store in Redis (5min TTL)
+2. Client requests nonce from /api/auth/nonce
+3. User signs message with wallet: "Sign this message to authenticate with Trogdor: {nonce}"
+4. Submit signature + publicKey to /api/auth/verify
+5. Verify signature server-side with nacl.sign.detached.verify()
+6. Create/update user with wallet address
+7. Issue NextAuth session
+
+## Key Libraries
+```typescript
+import { Connection, PublicKey } from '@solana/web3.js';
+import { useWallet } from '@solana/wallet-adapter-react';
+import * as nacl from 'tweetnacl';
+import bs58 from 'bs58';
+```
+
+## Client Component Pattern
+```typescript
+'use client';
+const { publicKey, signMessage } = useWallet();
+
+const handleAuth = async () => {
+  if (!publicKey || !signMessage) return;
+  
+  // 1. Get nonce
+  const { nonce } = await fetch('/api/auth/nonce').then(r => r.json());
+  
+  // 2. Sign message
+  const message = `Sign this message to authenticate with Trogdor: ${nonce}`;
+  const encodedMessage = new TextEncoder().encode(message);
+  const signature = await signMessage(encodedMessage);
+  
+  // 3. Verify & auth
+  await signIn('credentials', {
+    publicKey: publicKey.toString(),
+    signature: bs58.encode(signature),
+    message,
+  });
+};
+```
+
+## Server Verification
+```typescript
+const isValid = nacl.sign.detached.verify(
+  new TextEncoder().encode(message),
+  bs58.decode(signature),
+  new PublicKey(publicKey).toBytes()
+);
+```
+
+## Security Requirements
+- Always verify signatures server-side
+- Use nonces to prevent replay attacks
+- Store wallet addresses lowercased for consistency
+- Rate limit authentication endpoints
+- Never trust client-provided wallet ownership
+
+## Database Schema
+- users.walletAddress: varchar(44), unique, indexed
+- users.walletVerifiedAt: timestamp
+- Link wallet to user account in NextAuth callbacks
+
+## Common Patterns
+- Check wallet connection: if (!publicKey) return null;
+- Display truncated address: `${addr.slice(0,4)}...${addr.slice(-4)}`
+- Handle wallet disconnection: clear session
+- Support multiple wallets per user (future): separate wallets table
+
+## Error Handling
+- Wallet not installed: Show install prompt
+- User rejected signature: Show friendly error
+- Invalid signature: Return 401 with clear message
+- Network errors: Retry with exponential backoff
+
+## Testing Wallet Integration
+- Use Phantom or Solflare devnet wallets
+- Test with multiple wallet types
+- Test disconnection/reconnection flow
+- Verify nonce expiration works

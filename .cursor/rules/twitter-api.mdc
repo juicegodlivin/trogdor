@@ -1,0 +1,242 @@
+---# Twitter API Integration (twitterapi.io)
+
+**Toggle when building Twitter OAuth, webhooks, or mention monitoring.**
+
+## Twitter API Setup
+- Use twitterapi.io for OAuth 2.0 and webhook setup
+- Store credentials in environment variables
+- Base URL: https://api.twitterapi.io/v2
+
+## OAuth 2.0 Flow
+
+### NextAuth Configuration
+```typescript
+// src/app/api/auth/[...nextauth]/route.ts
+import TwitterProvider from 'next-auth/providers/twitter';
+
+providers: [
+  TwitterProvider({
+    clientId: process.env.TWITTER_CLIENT_ID!,
+    clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+    version: "2.0",
+    authorization: {
+      url: "https://twitter.com/i/oauth2/authorize",
+      params: {
+        scope: "tweet.read users.read offline.access",
+      },
+    },
+  }),
+]
+```
+
+### Callback Handler
+```typescript
+callbacks: {
+  async signIn({ account, profile }) {
+    if (account?.provider === 'twitter') {
+      // Store access token & refresh token
+      await db.update(users)
+        .set({
+          twitterId: profile.id,
+          twitterUsername: profile.username,
+          twitterAccessToken: account.access_token,
+          twitterRefreshToken: account.refresh_token,
+        })
+        .where(eq(users.id, session.user.id));
+    }
+    return true;
+  },
+}
+```
+
+## Webhook Setup
+
+### Register Webhook Endpoint
+```typescript
+// POST https://api.twitterapi.io/webhooks/register
+const response = await fetch('https://api.twitterapi.io/webhooks/register', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${process.env.TWITTER_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    url: 'https://yourdomain.com/api/webhooks/twitter',
+    event_types: ['tweet.mention'],
+  }),
+});
+```
+
+### Webhook Endpoint
+```typescript
+// app/api/webhooks/twitter/route.ts
+import { headers } from 'next/headers';
+import crypto from 'crypto';
+
+export async function POST(req: Request) {
+  // 1. Verify webhook signature
+  const headersList = headers();
+  const signature = headersList.get('x-twitter-signature');
+  const rawBody = await req.text();
+  
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.TWITTER_WEBHOOK_SECRET!)
+    .update(rawBody)
+    .digest('hex');
+  
+  if (signature !== expectedSignature) {
+    return new Response('Invalid signature', { status: 401 });
+  }
+  
+  // 2. Parse event
+  const event = JSON.parse(rawBody);
+  
+  if (event.type === 'tweet.mention') {
+    await handleTweetMention(event.data);
+  }
+  
+  return new Response('OK', { status: 200 });
+}
+```
+
+## Mention Processing
+
+### Extract Tweet Data
+```typescript
+async function handleTweetMention(tweetData: any) {
+  const {
+    id: tweetId,
+    author_id: authorTwitterId,
+    text,
+    created_at,
+    entities,
+  } = tweetData;
+  
+  // 1. Find user by Twitter ID
+  const [user] = await db.select()
+    .from(users)
+    .where(eq(users.twitterId, authorTwitterId))
+    .limit(1);
+  
+  if (!user) {
+    console.log('User not linked:', authorTwitterId);
+    return;
+  }
+  
+  // 2. Check idempotency
+  const processed = await redis.get(`tweet:${tweetId}:processed`);
+  if (processed) return;
+  
+  // 3. Calculate quality score
+  const score = calculateTweetQuality(text, entities);
+  
+  // 4. Award points with idempotency
+  await processTweetIdempotent(tweetId, user.id, score);
+}
+```
+
+### Quality Scoring Algorithm
+```typescript
+function calculateTweetQuality(text: string, entities: any): number {
+  let score = 10; // Base points
+  
+  // Length bonus (optimal 100-280 chars)
+  const length = text.length;
+  if (length >= 100 && length <= 280) score += 10;
+  
+  // Media bonus
+  if (entities?.media?.length) score += 20;
+  
+  // Hashtag penalty (looks spammy)
+  const hashtags = entities?.hashtags?.length || 0;
+  if (hashtags > 3) score -= hashtags * 5;
+  
+  // URL bonus (sharing content)
+  if (entities?.urls?.length) score += 5;
+  
+  // Mentions penalty (spam indicator)
+  const mentions = entities?.mentions?.length || 0;
+  if (mentions > 5) score -= 10;
+  
+  // Cap at 1-100
+  return Math.max(1, Math.min(100, score));
+}
+```
+
+## API Rate Limits
+- OAuth: 15 requests per 15 minutes
+- Tweets lookup: 900 requests per 15 minutes
+- User lookup: 900 requests per 15 minutes
+- Webhooks: No rate limit (event-driven)
+
+## Error Handling
+```typescript
+try {
+  const response = await fetch(twitterApiUrl, options);
+  
+  if (!response.ok) {
+    if (response.status === 429) {
+      // Rate limited - implement exponential backoff
+      const retryAfter = response.headers.get('x-rate-limit-reset');
+      console.error('Rate limited until:', new Date(Number(retryAfter) * 1000));
+    }
+    throw new Error(`Twitter API error: ${response.status}`);
+  }
+  
+  return await response.json();
+} catch (error) {
+  console.error('Twitter API request failed:', error);
+  throw error;
+}
+```
+
+## Webhook Retry Logic
+- Twitter retries failed webhooks up to 3 times
+- Implement idempotency to handle duplicates
+- Log failures for manual review
+- Use dead letter queue for unprocessable events
+
+## Token Refresh
+```typescript
+async function refreshTwitterToken(userId: number) {
+  const [user] = await db.select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  
+  const response = await fetch('https://api.twitter.com/2/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: user.twitterRefreshToken,
+      client_id: process.env.TWITTER_CLIENT_ID!,
+    }),
+  });
+  
+  const tokens = await response.json();
+  
+  await db.update(users)
+    .set({
+      twitterAccessToken: tokens.access_token,
+      twitterRefreshToken: tokens.refresh_token,
+    })
+    .where(eq(users.id, userId));
+}
+```
+
+## Testing Webhooks
+- Use ngrok for local testing: ngrok http 3000
+- Register ngrok URL with Twitter
+- Send test mention from test account
+- Verify signature validation works
+- Test idempotency with duplicate events
+
+## Security Checklist
+- ✅ Verify webhook signatures
+- ✅ Validate event types
+- ✅ Rate limit webhook endpoint
+- ✅ Store tokens encrypted at rest
+- ✅ Refresh tokens before expiry
+- ✅ Log suspicious activity
+- ✅ Implement idempotency

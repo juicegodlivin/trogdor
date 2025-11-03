@@ -1,0 +1,238 @@
+---# Redis Caching & Sessions
+
+**Toggle when implementing caching, rate limiting, or temporary data storage.**
+
+## Redis Setup (ioredis)
+```typescript
+// src/lib/redis.ts
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL!, {
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: true,
+  lazyConnect: true,
+});
+
+export default redis;
+```
+
+## Key Naming Conventions
+- Pattern: `{prefix}:{identifier}:{subkey}`
+- Examples:
+  - `nonce:${walletAddress}` - Auth nonces
+  - `user:${userId}:profile` - User cache
+  - `leaderboard:daily` - Daily rankings
+  - `tweet:${tweetId}:processed` - Tweet idempotency
+  - `ratelimit:${userId}:${endpoint}` - Rate limits
+
+## Common Patterns
+
+### Simple Key-Value
+```typescript
+// Set with expiration (TTL in seconds)
+await redis.setex(`nonce:${address}`, 300, nonce);
+
+// Get
+const nonce = await redis.get(`nonce:${address}`);
+
+// Delete
+await redis.del(`nonce:${address}`);
+```
+
+### JSON Objects
+```typescript
+// Store object
+await redis.setex(
+  `user:${userId}:profile`,
+  3600, // 1 hour
+  JSON.stringify(userProfile)
+);
+
+// Retrieve
+const cached = await redis.get(`user:${userId}:profile`);
+const profile = cached ? JSON.parse(cached) : null;
+```
+
+### Sorted Sets (Leaderboards)
+```typescript
+// Add/update score
+await redis.zadd('leaderboard:daily', points, userId);
+
+// Get top 10
+const topUsers = await redis.zrevrange('leaderboard:daily', 0, 9, 'WITHSCORES');
+
+// Get user rank (0-indexed)
+const rank = await redis.zrevrank('leaderboard:daily', userId);
+
+// Get user score
+const score = await redis.zscore('leaderboard:daily', userId);
+
+// Remove user
+await redis.zrem('leaderboard:daily', userId);
+```
+
+### Sets (Unique Collections)
+```typescript
+// Add to set
+await redis.sadd(`user:${userId}:tweets`, tweetId);
+
+// Check membership
+const exists = await redis.sismember(`user:${userId}:tweets`, tweetId);
+
+// Get all members
+const tweets = await redis.smembers(`user:${userId}:tweets`);
+
+// Count
+const count = await redis.scard(`user:${userId}:tweets`);
+```
+
+### Hash Maps
+```typescript
+// Set fields
+await redis.hset(`tweet:${tweetId}`, {
+  userId,
+  points,
+  processedAt: Date.now(),
+});
+
+// Get field
+const points = await redis.hget(`tweet:${tweetId}`, 'points');
+
+// Get all
+const tweet = await redis.hgetall(`tweet:${tweetId}`);
+```
+
+## Caching Strategies
+
+### Cache-Aside Pattern
+```typescript
+async function getUserProfile(userId: number) {
+  const cacheKey = `user:${userId}:profile`;
+  
+  // 1. Try cache
+  const cached = await redis.get(cacheKey);
+  if (cached) return JSON.parse(cached);
+  
+  // 2. Fetch from DB
+  const user = await db.select().from(users).where(eq(users.id, userId));
+  
+  // 3. Update cache
+  await redis.setex(cacheKey, 3600, JSON.stringify(user));
+  
+  return user;
+}
+```
+
+### Write-Through Pattern
+```typescript
+async function updateUser(userId: number, data: Partial<User>) {
+  // 1. Update DB
+  const [updated] = await db.update(users)
+    .set(data)
+    .where(eq(users.id, userId))
+    .returning();
+  
+  // 2. Update cache
+  const cacheKey = `user:${userId}:profile`;
+  await redis.setex(cacheKey, 3600, JSON.stringify(updated));
+  
+  return updated;
+}
+```
+
+### Cache Invalidation
+```typescript
+// Delete specific keys
+await redis.del(`user:${userId}:profile`);
+
+// Pattern-based deletion
+const keys = await redis.keys(`user:${userId}:*`);
+if (keys.length) await redis.del(...keys);
+
+// Expire immediately
+await redis.expire(`cache:${key}`, 0);
+```
+
+## Rate Limiting
+```typescript
+async function checkRateLimit(userId: number, maxRequests = 100, windowMs = 3600000) {
+  const key = `ratelimit:${userId}:api`;
+  
+  const current = await redis.incr(key);
+  
+  if (current === 1) {
+    await redis.pexpire(key, windowMs);
+  }
+  
+  return current <= maxRequests;
+}
+```
+
+## Idempotency (Tweet Processing)
+```typescript
+async function processTweetIdempotent(tweetId: string, userId: number, points: number) {
+  const lockKey = `tweet:${tweetId}:processing`;
+  const processedKey = `tweet:${tweetId}:processed`;
+  
+  // 1. Check if already processed (permanent marker)
+  const processed = await redis.get(processedKey);
+  if (processed) return null;
+  
+  // 2. Try to acquire lock (5 second TTL)
+  const locked = await redis.set(lockKey, '1', 'EX', 5, 'NX');
+  if (!locked) return null; // Another process is handling it
+  
+  try {
+    // 3. Double-check DB
+    const existing = await db.select().from(offerings)
+      .where(eq(offerings.tweetId, tweetId))
+      .limit(1);
+    
+    if (existing.length) {
+      await redis.setex(processedKey, 86400, '1'); // Mark as processed
+      return null;
+    }
+    
+    // 4. Process tweet
+    const [offering] = await db.insert(offerings)
+      .values({ userId, tweetId, points })
+      .returning();
+    
+    // 5. Mark as processed (24hr cache)
+    await redis.setex(processedKey, 86400, '1');
+    
+    return offering;
+  } finally {
+    // 6. Release lock
+    await redis.del(lockKey);
+  }
+}
+```
+
+## Best Practices
+- Always set TTL to prevent memory leaks
+- Use pipelining for multiple commands: `redis.pipeline().set().get().exec()`
+- Handle connection errors gracefully
+- Use namespaced keys for organization
+- Monitor memory usage
+- Set maxmemory-policy to allkeys-lru in production
+- Use connection pooling for high traffic
+
+## Common TTLs
+- Nonces: 5 minutes (300s)
+- User cache: 1 hour (3600s)
+- Leaderboard cache: 5 minutes (300s)
+- Tweet processed markers: 24 hours (86400s)
+- Rate limit windows: 1 hour (3600s)
+- Session data: 30 days (2592000s)
+
+## Error Handling
+```typescript
+try {
+  await redis.get(key);
+} catch (error) {
+  console.error('Redis error:', error);
+  // Fallback to database
+  return await fetchFromDB();
+}
+```

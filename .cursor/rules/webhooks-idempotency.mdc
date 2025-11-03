@@ -1,0 +1,420 @@
+---# Webhooks & Idempotency Patterns
+
+**Toggle when implementing webhook handlers, background jobs, or ensuring exactly-once processing.**
+
+## Multi-Layer Idempotency Strategy
+For critical operations like tweet processing, use multiple layers:
+1. **Redis Fast Check** - Immediate duplicate detection
+2. **Database Constraint** - Unique constraint on tweet_id
+3. **Distributed Lock** - Prevent concurrent processing
+
+## Webhook Best Practices
+
+### Signature Verification
+```typescript
+import crypto from 'crypto';
+
+function verifyWebhookSignature(
+  payload: string, 
+  signature: string, 
+  secret: string
+): boolean {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  
+  // Timing-safe comparison
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+```
+
+### Webhook Endpoint Template
+```typescript
+// app/api/webhooks/[service]/route.ts
+import { headers } from 'next/headers';
+
+export async function POST(req: Request) {
+  // 1. Get raw body for signature verification
+  const rawBody = await req.text();
+  const body = JSON.parse(rawBody);
+  
+  // 2. Verify signature
+  const headersList = headers();
+  const signature = headersList.get('x-webhook-signature');
+  
+  if (!signature || !verifyWebhookSignature(rawBody, signature, WEBHOOK_SECRET)) {
+    return new Response('Invalid signature', { status: 401 });
+  }
+  
+  // 3. Check idempotency key
+  const idempotencyKey = headersList.get('x-idempotency-key') || body.id;
+  const processed = await redis.get(`webhook:${idempotencyKey}`);
+  
+  if (processed) {
+    return new Response('Already processed', { status: 200 });
+  }
+  
+  // 4. Process webhook (with error handling)
+  try {
+    await processWebhookEvent(body);
+    
+    // 5. Mark as processed (24hr TTL)
+    await redis.setex(`webhook:${idempotencyKey}`, 86400, '1');
+    
+    return new Response('OK', { status: 200 });
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    // Return 500 so sender retries
+    return new Response('Processing failed', { status: 500 });
+  }
+}
+```
+
+## Idempotent Tweet Processing
+
+### Complete Implementation
+```typescript
+async function processTweetIdempotent(
+  tweetId: string,
+  userId: number,
+  points: number
+): Promise<'processed' | 'duplicate' | 'error'> {
+  
+  // Layer 1: Redis fast check (cache lookup ~1ms)
+  const redisKey = `tweet:${tweetId}:processed`;
+  const alreadyProcessed = await redis.get(redisKey);
+  
+  if (alreadyProcessed) {
+    console.log('Tweet already processed (Redis):', tweetId);
+    return 'duplicate';
+  }
+  
+  // Layer 2: Distributed lock (prevent race conditions)
+  const lockKey = `tweet:${tweetId}:lock`;
+  const lockAcquired = await redis.set(lockKey, '1', 'EX', 10, 'NX');
+  
+  if (!lockAcquired) {
+    console.log('Tweet being processed by another worker:', tweetId);
+    return 'duplicate';
+  }
+  
+  try {
+    // Layer 3: Database check (authoritative source)
+    const existing = await db.select()
+      .from(offerings)
+      .where(eq(offerings.tweetId, tweetId))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      // Mark in Redis to avoid future DB checks
+      await redis.setex(redisKey, 86400, '1');
+      return 'duplicate';
+    }
+    
+    // Layer 4: Process with database transaction
+    await db.transaction(async (tx) => {
+      // Insert offering
+      await tx.insert(offerings).values({
+        userId,
+        tweetId,
+        points,
+        createdAt: new Date(),
+      });
+      
+      // Update user totals atomically
+      await tx.execute(sql`
+        UPDATE users 
+        SET 
+          total_offerings = total_offerings + ${points},
+          quality_score = quality_score + ${points},
+          updated_at = NOW()
+        WHERE id = ${userId}
+      `);
+    });
+    
+    // Layer 5: Mark as processed in Redis (cache for 24hrs)
+    await redis.setex(redisKey, 86400, '1');
+    
+    // Layer 6: Invalidate user cache
+    await redis.del(`user:${userId}:profile`);
+    
+    console.log('Tweet processed successfully:', tweetId);
+    return 'processed';
+    
+  } catch (error) {
+    console.error('Tweet processing error:', tweetId, error);
+    
+    // Check if it's a duplicate key error
+    if ((error as any).code === '23505') {
+      // Unique constraint violation - another process inserted it
+      await redis.setex(redisKey, 86400, '1');
+      return 'duplicate';
+    }
+    
+    return 'error';
+  } finally {
+    // Always release lock
+    await redis.del(lockKey);
+  }
+}
+```
+
+## Distributed Lock Pattern
+```typescript
+class DistributedLock {
+  constructor(
+    private redis: Redis,
+    private key: string,
+    private ttl: number = 10 // seconds
+  ) {}
+  
+  async acquire(): Promise<boolean> {
+    const acquired = await this.redis.set(
+      this.key,
+      Date.now().toString(),
+      'EX',
+      this.ttl,
+      'NX'
+    );
+    return acquired === 'OK';
+  }
+  
+  async release(): Promise<void> {
+    await this.redis.del(this.key);
+  }
+  
+  async extend(): Promise<boolean> {
+    const extended = await this.redis.expire(this.key, this.ttl);
+    return extended === 1;
+  }
+}
+
+// Usage
+const lock = new DistributedLock(redis, `lock:tweet:${tweetId}`, 30);
+
+if (await lock.acquire()) {
+  try {
+    // Critical section
+    await processTweet(tweetId);
+  } finally {
+    await lock.release();
+  }
+} else {
+  console.log('Could not acquire lock');
+}
+```
+
+## Retry Strategy with Exponential Backoff
+```typescript
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      
+      if (attempt < maxRetries) {
+        // Exponential backoff: 1s, 2s, 4s, 8s...
+        const delay = baseDelay * Math.pow(2, attempt);
+        const jitter = Math.random() * 1000; // Add jitter
+        
+        console.log(`Retry ${attempt + 1}/${maxRetries} after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay + jitter));
+      }
+    }
+  }
+  
+  throw lastError!;
+}
+
+// Usage
+const result = await retryWithBackoff(
+  () => fetch('https://api.example.com/data'),
+  3,
+  1000
+);
+```
+
+## Webhook Retry Handler (Server-Side)
+```typescript
+interface WebhookEvent {
+  id: string;
+  url: string;
+  payload: any;
+  signature: string;
+}
+
+async function sendWebhook(event: WebhookEvent): Promise<void> {
+  const maxRetries = 3;
+  const delays = [0, 5000, 30000]; // 0s, 5s, 30s
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(event.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Webhook-Signature': event.signature,
+          'X-Idempotency-Key': event.id,
+        },
+        body: JSON.stringify(event.payload),
+      });
+      
+      if (response.ok) {
+        console.log('Webhook delivered:', event.id);
+        return;
+      }
+      
+      // Don't retry on client errors (4xx)
+      if (response.status >= 400 && response.status < 500) {
+        console.error('Webhook client error:', response.status);
+        return;
+      }
+      
+      throw new Error(`HTTP ${response.status}`);
+      
+    } catch (error) {
+      console.error(`Webhook attempt ${attempt + 1} failed:`, error);
+      
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+      } else {
+        // Final failure - send to dead letter queue
+        await storeFailedWebhook(event);
+      }
+    }
+  }
+}
+```
+
+## Dead Letter Queue Pattern
+```typescript
+interface FailedJob {
+  id: string;
+  type: string;
+  payload: any;
+  error: string;
+  attempts: number;
+  failedAt: Date;
+}
+
+async function storeFailedWebhook(event: WebhookEvent): Promise<void> {
+  await db.insert(failedJobs).values({
+    type: 'webhook',
+    payload: event.payload,
+    error: 'Max retries exceeded',
+    attempts: 3,
+    failedAt: new Date(),
+  });
+  
+  // Alert admins
+  console.error('Webhook failed permanently:', event.id);
+}
+
+// Manual retry endpoint
+export async function POST(req: Request) {
+  const { jobId } = await req.json();
+  
+  const [job] = await db.select()
+    .from(failedJobs)
+    .where(eq(failedJobs.id, jobId));
+  
+  if (!job) return Response.json({ error: 'Not found' }, { status: 404 });
+  
+  try {
+    // Retry the job
+    await processWebhookEvent(job.payload);
+    
+    // Remove from failed queue
+    await db.delete(failedJobs).where(eq(failedJobs.id, jobId));
+    
+    return Response.json({ success: true });
+  } catch (error) {
+    return Response.json({ error: 'Retry failed' }, { status: 500 });
+  }
+}
+```
+
+## Webhook Testing
+```typescript
+// Test webhook endpoint locally
+async function testWebhook() {
+  const payload = {
+    id: 'test-123',
+    type: 'tweet.mention',
+    data: {
+      tweet_id: '1234567890',
+      author_id: 'user123',
+      text: '@trogdor burninate!',
+    },
+  };
+  
+  const signature = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  
+  const response = await fetch('http://localhost:3000/api/webhooks/twitter', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Webhook-Signature': signature,
+    },
+    body: JSON.stringify(payload),
+  });
+  
+  console.log('Status:', response.status);
+  console.log('Body:', await response.text());
+}
+```
+
+## Monitoring & Alerting
+```typescript
+// Track webhook metrics
+async function trackWebhookMetrics(
+  event: string,
+  duration: number,
+  success: boolean
+) {
+  await redis.hincrby('webhook:metrics', `${event}:total`, 1);
+  
+  if (success) {
+    await redis.hincrby('webhook:metrics', `${event}:success`, 1);
+  } else {
+    await redis.hincrby('webhook:metrics', `${event}:failed`, 1);
+  }
+  
+  // Track average duration
+  await redis.hset('webhook:metrics', `${event}:avg_duration`, duration);
+}
+
+// Get metrics
+const metrics = await redis.hgetall('webhook:metrics');
+console.log(metrics);
+// { 'tweet.mention:total': '1000', 'tweet.mention:success': '990', ... }
+```
+
+## Best Practices Checklist
+- ✅ Always verify webhook signatures
+- ✅ Use idempotency keys for all operations
+- ✅ Implement multi-layer duplicate detection
+- ✅ Use distributed locks for critical sections
+- ✅ Return 200 OK for duplicate/processed events
+- ✅ Return 500 for retriable errors
+- ✅ Return 400 for non-retriable errors
+- ✅ Log all webhook events
+- ✅ Monitor success/failure rates
+- ✅ Implement dead letter queue
+- ✅ Add manual retry capability
+- ✅ Set reasonable timeouts (10-30s)
+- ✅ Use exponential backoff for retries

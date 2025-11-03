@@ -1,0 +1,83 @@
+---Trogdor Tech Stack Fundamentals
+
+## Next.js 14+ (App Router)
+- Use App Router exclusively, no Pages Router
+- Prefer Server Components by default
+- Use Client Components only when needed: 'use client' directive
+- Client Component triggers: useState, useEffect, event handlers, browser APIs
+- Implement loading.tsx for Suspense boundaries
+- Use error.tsx for error boundaries
+- Organize by feature: app/(feature)/page.tsx
+- API routes: app/api/[route]/route.ts
+
+## TypeScript Strict Mode
+- Enable all strict flags in tsconfig.json
+- Never use 'any' type - use 'unknown' if needed
+- Define interfaces for all data structures
+- Use type inference where obvious
+- Prefer types over interfaces for unions
+- Use const assertions for literal types
+- Leverage discriminated unions for state
+
+## tRPC Type-Safe APIs
+- Define routers in src/server/api/routers/
+- Use Zod for input validation
+- Return typed outputs from procedures
+- Use middleware for auth/logging
+- Create context with auth session
+- Client calls: trpc.router.procedure.useQuery()
+
+## Drizzle ORM
+- Define schema in src/lib/db/schema.ts
+- Use schema exports for type inference
+- Always use parameterized queries (built-in)
+- Use db.select().from(table).where() patterns
+- Leverage .returning() for insert/update
+- Create indexes in schema for frequent queries
+- Use transactions for multi-step operations
+
+## React Server Components Best Practices
+- Fetch data directly in Server Components
+- Pass data to Client Components as props
+- Keep Client Components small and focused
+- Use Server Actions for mutations
+- Avoid prop drilling with proper composition
+
+## Tailwind CSS
+- Use utility classes, avoid custom CSS
+- Follow mobile-first responsive design
+- Use theme colors from tailwind.config.ts
+- Group utilities logically: layout, spacing, colors, typography
+- Use @apply sparingly, only for repeated patterns
+- Leverage arbitrary values: w-[137px] when needed
+
+## File Structure Conventions
+- Components: src/components/[feature]/ComponentName.tsx
+- Server code: src/server/api/, src/lib/db/
+- Client utilities: src/lib/client/
+- Types: Define inline or src/types/ for shared
+- Keep related files together by feature
+
+## Import Patterns
+- Use absolute imports with @ alias
+- Group imports: React → Next → External → Internal → Types
+- Prefer named imports over default
+- Use dynamic imports for code splitting
+
+## Naming Conventions
+- Files: kebab-case.tsx
+- Components: PascalCase
+- Functions: camelCase
+- Constants: SCREAMING_SNAKE_CASE
+- Private functions: _prefixUnderscore
+- Types/Interfaces: PascalCase with descriptive names
+
+## Common Patterns
+- Server Component data: async function getData()
+- Client state: useState, useReducer from React
+- Server mutations: use server actions with revalidatePath
+- Error handling: try-catch with specific error types
+- Forms: use server actions + useFormState for progressively enhanced forms
+
+alwaysApply: true
+---

@@ -1,0 +1,368 @@
+---# NextAuth.js v5 (Auth.js) Configuration
+
+**Toggle when implementing authentication, sessions, or user management.**
+
+## NextAuth Setup
+```typescript
+// src/app/api/auth/[...nextauth]/route.ts
+import NextAuth from 'next-auth';
+import type { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import TwitterProvider from 'next-auth/providers/twitter';
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    // Web3 Wallet Authentication
+    CredentialsProvider({
+      id: 'solana',
+      name: 'Solana Wallet',
+      credentials: {
+        publicKey: { label: "Public Key", type: "text" },
+        signature: { label: "Signature", type: "text" },
+        message: { label: "Message", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials) return null;
+        
+        // Verify signature (see Web3 rule)
+        const isValid = await verifyWalletSignature(
+          credentials.publicKey,
+          credentials.signature,
+          credentials.message
+        );
+        
+        if (!isValid) return null;
+        
+        // Find or create user
+        let [user] = await db.select()
+          .from(users)
+          .where(eq(users.walletAddress, credentials.publicKey.toLowerCase()))
+          .limit(1);
+        
+        if (!user) {
+          [user] = await db.insert(users)
+            .values({ walletAddress: credentials.publicKey.toLowerCase() })
+            .returning();
+        }
+        
+        return {
+          id: user.id.toString(),
+          walletAddress: user.walletAddress,
+        };
+      },
+    }),
+    
+    // Twitter OAuth
+    TwitterProvider({
+      clientId: process.env.TWITTER_CLIENT_ID!,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+      version: "2.0",
+    }),
+  ],
+  
+  callbacks: {
+    async jwt({ token, user, account }) {
+      // Initial sign in
+      if (user) {
+        token.id = user.id;
+        token.walletAddress = user.walletAddress;
+      }
+      
+      // Twitter OAuth
+      if (account?.provider === 'twitter') {
+        token.twitterId = account.providerAccountId;
+        token.twitterAccessToken = account.access_token;
+      }
+      
+      return token;
+    },
+    
+    async session({ session, token }) {
+      session.user.id = Number(token.id);
+      session.user.walletAddress = token.walletAddress as string;
+      session.user.twitterId = token.twitterId as string;
+      
+      return session;
+    },
+    
+    async signIn({ user, account, profile }) {
+      // Link Twitter account to existing user
+      if (account?.provider === 'twitter' && user.id) {
+        await db.update(users)
+          .set({
+            twitterId: account.providerAccountId,
+            twitterUsername: profile?.username,
+            twitterAccessToken: account.access_token,
+            twitterRefreshToken: account.refresh_token,
+          })
+          .where(eq(users.id, Number(user.id)));
+      }
+      
+      return true;
+    },
+  },
+  
+  pages: {
+    signIn: '/auth/signin',
+    error: '/auth/error',
+  },
+  
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  
+  secret: process.env.NEXTAUTH_SECRET,
+};
+
+const handler = NextAuth(authOptions);
+export { handler as GET, handler as POST };
+```
+
+## Type Declarations
+```typescript
+// src/types/next-auth.d.ts
+import { DefaultSession } from 'next-auth';
+
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: number;
+      walletAddress?: string;
+      twitterId?: string;
+      twitterUsername?: string;
+    } & DefaultSession['user'];
+  }
+  
+  interface User {
+    id: string;
+    walletAddress?: string;
+    twitterId?: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+    walletAddress?: string;
+    twitterId?: string;
+    twitterAccessToken?: string;
+  }
+}
+```
+
+## Server-Side Session Access
+```typescript
+// In Server Components or API Routes
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
+export default async function ProtectedPage() {
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    redirect('/auth/signin');
+  }
+  
+  return <div>Welcome {session.user.walletAddress}</div>;
+}
+```
+
+## Client-Side Session Access
+```typescript
+'use client';
+import { useSession, signIn, signOut } from 'next-auth/react';
+
+export function AuthButton() {
+  const { data: session, status } = useSession();
+  
+  if (status === 'loading') return <div>Loading...</div>;
+  
+  if (session) {
+    return (
+      <div>
+        <p>Signed in as {session.user.walletAddress}</p>
+        <button onClick={() => signOut()}>Sign out</button>
+      </div>
+    );
+  }
+  
+  return <button onClick={() => signIn('solana')}>Sign in with Wallet</button>;
+}
+```
+
+## API Route Protection
+```typescript
+// app/api/protected/route.ts
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
+export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  
+  // Protected logic here
+  const userId = session.user.id;
+  
+  return Response.json({ data: 'Protected data' });
+}
+```
+
+## tRPC Middleware
+```typescript
+// src/server/api/trpc.ts
+import { getServerSession } from 'next-auth';
+
+export const createTRPCContext = async (opts: { headers: Headers }) => {
+  const session = await getServerSession(authOptions);
+  
+  return {
+    session,
+    db,
+    redis,
+  };
+};
+
+const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
+  }
+  
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
+
+export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
+```
+
+## Session Provider Setup
+```typescript
+// app/providers.tsx
+'use client';
+import { SessionProvider } from 'next-auth/react';
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return <SessionProvider>{children}</SessionProvider>;
+}
+
+// app/layout.tsx
+import { Providers } from './providers';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
+```
+
+## Custom Sign-In Flow (Web3)
+```typescript
+'use client';
+import { signIn } from 'next-auth/react';
+import { useWallet } from '@solana/wallet-adapter-react';
+
+export function WalletConnectButton() {
+  const { publicKey, signMessage } = useWallet();
+  
+  const handleConnect = async () => {
+    if (!publicKey || !signMessage) return;
+    
+    try {
+      // 1. Get nonce
+      const nonceRes = await fetch('/api/auth/nonce');
+      const { nonce } = await nonceRes.json();
+      
+      // 2. Sign message
+      const message = `Sign this message to authenticate: ${nonce}`;
+      const encodedMessage = new TextEncoder().encode(message);
+      const signature = await signMessage(encodedMessage);
+      
+      // 3. Sign in with NextAuth
+      await signIn('solana', {
+        publicKey: publicKey.toString(),
+        signature: bs58.encode(signature),
+        message,
+        redirect: false,
+      });
+      
+    } catch (error) {
+      console.error('Auth error:', error);
+    }
+  };
+  
+  return <button onClick={handleConnect}>Connect Wallet</button>;
+}
+```
+
+## Session Refresh
+```typescript
+// Refresh session when user data changes
+import { useSession } from 'next-auth/react';
+
+const { update } = useSession();
+
+// After updating user data
+await update({
+  ...session,
+  user: {
+    ...session.user,
+    twitterUsername: newUsername,
+  },
+});
+```
+
+## Middleware Protection
+```typescript
+// middleware.ts
+export { default } from 'next-auth/middleware';
+
+export const config = {
+  matcher: [
+    '/dashboard/:path*',
+    '/api/protected/:path*',
+  ],
+};
+```
+
+## Environment Variables
+```bash
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=generate-with-openssl-rand-base64-32
+TWITTER_CLIENT_ID=your-client-id
+TWITTER_CLIENT_SECRET=your-client-secret
+```
+
+## Best Practices
+- Always use getServerSession in Server Components
+- Use useSession in Client Components only
+- Store sensitive tokens server-side only
+- Implement CSRF protection (built into NextAuth)
+- Use HTTP-only cookies for session tokens
+- Refresh tokens before expiry
+- Log failed authentication attempts
+- Implement rate limiting on auth endpoints
+
+## Common Errors & Fixes
+
+**"NEXTAUTH_URL is not defined"**
+- Set in .env.local: NEXTAUTH_URL=http://localhost:3000
+
+**"Session is null in Server Component"**
+- Pass authOptions to getServerSession(authOptions)
+
+**"Can't read session in API route"**
+- Use getServerSession, not useSession (client-only)
+
+**"Twitter OAuth fails"**
+- Check callback URL matches in Twitter Developer Portal
+- Verify client ID and secret are correct
