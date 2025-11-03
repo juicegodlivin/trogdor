@@ -1,13 +1,17 @@
 #!/usr/bin/env tsx
+
+// MUST load environment variables FIRST before any other imports
+import('dotenv').then(({ config }) => {
+  config({ path: '.env.local' });
+});
+
+// For TypeScript, use require-style to ensure dotenv loads synchronously
+require('dotenv').config({ path: '.env.local' });
+
 /**
  * Manual script to fetch Twitter mentions and process them
  * Usage: tsx scripts/fetch-mentions.ts
  */
-
-// Load environment variables from .env.local
-import { config } from 'dotenv';
-import { resolve } from 'path';
-config({ path: resolve(process.cwd(), '.env.local') });
 
 import { getTwitterApi } from '../src/lib/api/twitter';
 const twitterApi = getTwitterApi();
