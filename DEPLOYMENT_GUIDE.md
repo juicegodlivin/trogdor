@@ -13,8 +13,9 @@
 Create a file locally with all your production values:
 
 ```bash
-# Database (Supabase)
-DATABASE_URL="postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:6543/postgres?pgbouncer=true&prepare=false"
+# Database (Supabase) - IMPORTANT: Use SESSION POOLER mode
+# Go to Supabase → Settings → Database → Connection Pooling → Session mode
+DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true"
 
 # Redis (Upstash)
 REDIS_URL="rediss://default:[PASSWORD]@[INSTANCE].upstash.io:6379"
@@ -164,9 +165,19 @@ vercel logs [deployment-url]
 
 ### Database Connection Issues
 
+**CRITICAL: Use Session Pooler, NOT Transaction Pooler**
+
+Transaction pooler does NOT support CREATE TABLE and other DDL operations. You'll get misleading "Tenant or user not found" errors.
+
+**Correct setup:**
+1. Go to Supabase Dashboard → Settings → Database → Connection Pooling
+2. Select **"Session"** mode (NOT Transaction)
+3. Copy the connection string
+4. Use that in Vercel
+
 ```bash
-# Test connection
-psql "postgresql://postgres:[PASSWORD]@[PROJECT].supabase.co:5432/postgres"
+# Test connection locally
+DATABASE_URL="your-session-pooler-url" npm run db:migrate-prod
 
 # Check Vercel logs
 vercel logs --follow
