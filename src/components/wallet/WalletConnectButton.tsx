@@ -23,9 +23,11 @@ export function WalletConnectButton() {
   useEffect(() => {
     const walletName = wallet?.adapter?.name;
     
-    if (wallet && !connected && !isAuthenticating && walletName && connectAttemptRef.current !== walletName) {
+    // MUTEX LOCK: If ref is not null, a connection is already in progress
+    if (wallet && !connected && !isAuthenticating && walletName && connectAttemptRef.current === null) {
+      // Set lock IMMEDIATELY
       connectAttemptRef.current = walletName;
-      console.log('🔌 Auto-connecting wallet:', walletName);
+      console.log('🔌 Connect lock acquired for:', walletName);
       
       // Add small delay to let wallet adapter initialize
       const timer = setTimeout(() => {
