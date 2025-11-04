@@ -36,7 +36,7 @@ export function WalletConnectButton() {
     async function authenticate() {
       if (!signMessage) {
         console.error('❌ signMessage function is not available');
-        hasAttemptedAuthRef.current.delete(walletAddress);
+        if (walletAddress) hasAttemptedAuthRef.current.delete(walletAddress);
         setIsAuthenticating(false);
         return;
       }
@@ -88,7 +88,7 @@ export function WalletConnectButton() {
     }
 
     authenticate();
-  }, [publicKey, signMessage, session, status, mounted]);
+  }, [publicKey, signMessage, session, status, mounted, disconnect]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
