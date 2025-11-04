@@ -60,16 +60,16 @@ export function WalletConnectButton() {
     // - No wallet connected
     // - No sign function
     // - Already have a session
-    // - Currently authenticating
-    // - Already attempted auth for this wallet
-    if (!walletAddress || !signMessage || session || isAuthenticating || authAttemptRef.current === walletAddress) {
+    // - ANY authentication is in progress (check ref is not null)
+    if (!walletAddress || !signMessage || session || authAttemptRef.current !== null) {
       return;
     }
 
-    // Mark this wallet as being authenticated IMMEDIATELY and SYNCHRONOUSLY
+    // CRITICAL: Set the lock IMMEDIATELY and SYNCHRONOUSLY before any async operations
+    // Using a non-null value acts as a lock preventing concurrent effect runs
     authAttemptRef.current = walletAddress;
-    setIsAuthenticating(true); // Set this IMMEDIATELY to block any concurrent effect runs
-    console.log('🔒 Marked wallet for auth:', walletAddress);
+    setIsAuthenticating(true);
+    console.log('🔒 Auth lock acquired for:', walletAddress);
     
     async function authenticate() {
       if (cancelled) {
