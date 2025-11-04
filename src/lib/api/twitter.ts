@@ -115,7 +115,7 @@ export class TwitterApiClient {
 
   /**
    * Get user information by username (screen name)
-   * Returns user info including their Twitter ID
+   * Returns user info including their Twitter ID and profile picture
    */
   async getUserByUsername(username: string): Promise<{ data: TwitterUser }> {
     // Remove @ if present
@@ -123,8 +123,6 @@ export class TwitterApiClient {
     
     const params = new URLSearchParams({
       userName: cleanUsername,
-      // Request additional user fields including profile image
-      'user.fields': 'profile_image_url,public_metrics,verified',
     });
 
     const endpoint = `/twitter/user/info?${params.toString()}`;
@@ -133,14 +131,10 @@ export class TwitterApiClient {
 
   /**
    * Get user information by ID
+   * Returns user info including profile picture
    */
   async getUserById(userId: string): Promise<{ data: TwitterUser }> {
-    const params = new URLSearchParams({
-      // Request additional user fields including profile image
-      'user.fields': 'profile_image_url,public_metrics,verified',
-    });
-    
-    const endpoint = `/twitter/user/${userId}?${params.toString()}`;
+    const endpoint = `/twitter/user/${userId}`;
     return this.request<{ data: TwitterUser }>(endpoint);
   }
 }

@@ -109,19 +109,26 @@ export const userRouter = router({
         const twitterApi = getTwitterApi();
         const response = await twitterApi.getUserByUsername(cleanUsername);
         
-        console.log('📦 Full Twitter API Response:', JSON.stringify(response, null, 2));
+        // Log full response for debugging
+        console.log('📦 RAW TWITTER API RESPONSE:');
+        console.log(JSON.stringify(response, null, 2));
         
         if (!response.data) {
+          console.error('❌ No data in Twitter API response');
           throw new Error('Twitter user not found. Please check the username and try again.');
         }
 
         const twitterId = response.data.id;
         const twitterName = response.data.name;
-        const profileImageUrl = response.data.profile_image_url;
+        // TwitterAPI.io uses 'profilePicture' not 'profile_image_url'
+        const profileImageUrl = response.data.profilePicture || response.data.profile_image_url;
         
-        console.log(`✅ Found Twitter user: @${cleanUsername} (ID: ${twitterId})`);
-        console.log(`📸 Profile image URL: ${profileImageUrl || 'NOT FOUND IN RESPONSE'}`);
-        console.log(`📋 Available fields:`, Object.keys(response.data));
+        console.log(`✅ Twitter User Found:`);
+        console.log(`   - Username: @${cleanUsername}`);
+        console.log(`   - ID: ${twitterId}`);
+        console.log(`   - Name: ${twitterName}`);
+        console.log(`   - Profile Image URL: ${profileImageUrl || '⚠️ MISSING FROM API RESPONSE'}`);
+        console.log(`   - Response Data Keys:`, Object.keys(response.data).join(', '));
 
         // Check if this Twitter ID is already linked to another wallet
         const existingUserWithId = await ctx.db

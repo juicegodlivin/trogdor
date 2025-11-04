@@ -4,10 +4,14 @@
 
 export interface TwitterUser {
   id: string;
-  username: string;
+  username?: string;
+  userName?: string;
   name: string;
-  verified: boolean;
+  verified?: boolean;
+  isBlueVerified?: boolean;
   profile_image_url?: string;
+  profilePicture?: string; // TwitterAPI.io format
+  coverPicture?: string;
   public_metrics?: {
     followers_count: number;
     following_count: number;
