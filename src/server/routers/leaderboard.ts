@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { users } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 import { RedisKeys } from '@/lib/redis/keys';
+import { TRPCError } from '@trpc/server';
+import { checkRateLimit, RateLimits } from '@/lib/rate-limit';
 
 export const leaderboardRouter = router({
   getLeaderboard: publicProcedure
@@ -15,6 +17,17 @@ export const leaderboardRouter = router({
     )
     .query(async ({ input, ctx }) => {
       try {
+        // Rate limit: 300 requests per minute per IP (lenient for public endpoint)
+        const identifier = ctx.ip;
+        const rateLimit = await checkRateLimit(ctx.redis, identifier, RateLimits.lenient);
+        
+        if (!rateLimit.allowed) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: 'Too many requests. Please wait a moment before refreshing.',
+          });
+        }
+
         const { period, page, limit } = input;
         const offset = (page - 1) * limit;
 
@@ -66,6 +79,17 @@ export const leaderboardRouter = router({
 
   getTopTen: publicProcedure.query(async ({ ctx }) => {
     try {
+      // Rate limit: 300 requests per minute per IP
+      const identifier = ctx.ip;
+      const rateLimit = await checkRateLimit(ctx.redis, identifier, RateLimits.lenient);
+      
+      if (!rateLimit.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: 'Too many requests. Please wait a moment.',
+        });
+      }
+
       // Check cache first
       if (ctx.redis) {
         try {

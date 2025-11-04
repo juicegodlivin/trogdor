@@ -1,10 +1,23 @@
 import { router, publicProcedure } from '../trpc';
 import { users, generatedImages } from '@/lib/db/schema';
 import { count, sum } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
+import { checkRateLimit, RateLimits } from '@/lib/rate-limit';
 
 export const statsRouter = router({
   getGlobalStats: publicProcedure.query(async ({ ctx }) => {
     try {
+      // Rate limit: 300 requests per minute per IP
+      const identifier = ctx.ip;
+      const rateLimit = await checkRateLimit(ctx.redis, identifier, RateLimits.lenient);
+      
+      if (!rateLimit.allowed) {
+        throw new TRPCError({
+          code: 'TOO_MANY_REQUESTS',
+          message: 'Too many requests. Please wait a moment.',
+        });
+      }
+
       // Check cache first
       if (ctx.redis) {
         try {
