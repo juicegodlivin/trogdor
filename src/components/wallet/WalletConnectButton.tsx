@@ -66,25 +66,26 @@ export function WalletConnectButton() {
       return;
     }
 
-    // Mark this wallet as being authenticated IMMEDIATELY (before async)
+    // Mark this wallet as being authenticated IMMEDIATELY and SYNCHRONOUSLY
     authAttemptRef.current = walletAddress;
+    setIsAuthenticating(true); // Set this IMMEDIATELY to block any concurrent effect runs
     console.log('🔒 Marked wallet for auth:', walletAddress);
     
     async function authenticate() {
       if (cancelled) {
         console.log('⚠️ Auth cancelled (component unmounted)');
+        setIsAuthenticating(false);
         return;
       }
       // Double-check signMessage still exists
       if (!signMessage) {
         console.error('❌ signMessage function is not available');
         authAttemptRef.current = null;
+        setIsAuthenticating(false);
         return;
       }
       
       try {
-        setIsAuthenticating(true);
-        
         console.log('🔐 Starting authentication for wallet:', walletAddress);
 
         // 1. Get nonce from server
