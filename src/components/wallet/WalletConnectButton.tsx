@@ -27,10 +27,15 @@ export function WalletConnectButton() {
       connectAttemptRef.current = walletName;
       console.log('🔌 Auto-connecting wallet:', walletName);
       
-      connect().catch((error) => {
-        console.error('Auto-connect failed:', error);
-        connectAttemptRef.current = null; // Allow retry on error
-      });
+      // Add small delay to let wallet adapter initialize
+      const timer = setTimeout(() => {
+        connect().catch((error) => {
+          console.error('Auto-connect failed:', error);
+          connectAttemptRef.current = null; // Allow retry on error
+        });
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
     
     // Reset when wallet is disconnected
@@ -41,6 +46,8 @@ export function WalletConnectButton() {
 
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
+    let cancelled = false;
+    
     // Wait for session to load before checking
     if (status === 'loading') {
       return;
@@ -61,8 +68,13 @@ export function WalletConnectButton() {
 
     // Mark this wallet as being authenticated IMMEDIATELY (before async)
     authAttemptRef.current = walletAddress;
+    console.log('🔒 Marked wallet for auth:', walletAddress);
     
     async function authenticate() {
+      if (cancelled) {
+        console.log('⚠️ Auth cancelled (component unmounted)');
+        return;
+      }
       // Double-check signMessage still exists
       if (!signMessage) {
         console.error('❌ signMessage function is not available');
@@ -122,6 +134,11 @@ export function WalletConnectButton() {
     }
 
     authenticate();
+    
+    // Cleanup function
+    return () => {
+      cancelled = true;
+    };
   }, [publicKey, signMessage, session, status]);
 
   // Reset auth attempt when wallet disconnects
