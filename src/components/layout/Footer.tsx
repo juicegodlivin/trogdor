@@ -5,7 +5,8 @@ import { MedievalIcon } from '@/components/ui/MedievalIcon';
 import { trpc } from '@/lib/trpc/client';
 
 export function Footer() {
-  const { data: stats } = trpc.stats.getGlobalStats.useQuery();
+  const { data: stats, isLoading, error } = trpc.stats.getGlobalStats.useQuery();
+  
   return (
     <footer className="border-t-2 border-pencil bg-white mt-20">
       <div className="container mx-auto px-4 py-12">
@@ -65,25 +66,44 @@ export function Footer() {
 
           {/* Stats */}
           <div>
-            <h3 className="font-hand text-2xl mb-4">Stats</h3>
+            <h3 className="font-hand text-2xl mb-4">
+              Stats
+              {isLoading && (
+                <span className="text-xs text-pencil-light ml-2 font-normal">
+                  (live)
+                </span>
+              )}
+            </h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span>Cult Members</span>
-                <span className="font-bold">
-                  {stats?.cultMembers?.toLocaleString() || '0'}
-                </span>
+                {isLoading ? (
+                  <div className="h-4 w-16 bg-sketch animate-pulse rounded" />
+                ) : (
+                  <span className="font-bold">
+                    {error ? '---' : stats?.cultMembers?.toLocaleString() || '0'}
+                  </span>
+                )}
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span>Total Offerings</span>
-                <span className="font-bold text-accent-green">
-                  {stats?.totalOfferings?.toLocaleString() || '0'}
-                </span>
+                {isLoading ? (
+                  <div className="h-4 w-16 bg-sketch animate-pulse rounded" />
+                ) : (
+                  <span className="font-bold text-accent-green">
+                    {error ? '---' : stats?.totalOfferings?.toLocaleString() || '0'}
+                  </span>
+                )}
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span>Images Generated</span>
-                <span className="font-bold">
-                  {stats?.imagesGenerated?.toLocaleString() || '0'}
-                </span>
+                {isLoading ? (
+                  <div className="h-4 w-16 bg-sketch animate-pulse rounded" />
+                ) : (
+                  <span className="font-bold">
+                    {error ? '---' : stats?.imagesGenerated?.toLocaleString() || '0'}
+                  </span>
+                )}
               </div>
             </div>
           </div>
