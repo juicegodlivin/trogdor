@@ -32,19 +32,28 @@ export function WalletConnectButton() {
 
       try {
         setIsAuthenticating(true);
+        
+        console.log('🔐 Starting authentication for wallet:', publicKey.toString());
 
         // 1. Get nonce from server
         const nonceRes = await fetch('/api/auth/nonce');
+        if (!nonceRes.ok) {
+          throw new Error('Failed to fetch nonce');
+        }
         const { nonce } = await nonceRes.json();
+        console.log('✅ Nonce received:', nonce);
 
         // 2. Create message to sign
         const message = `Welcome to Trogdor the Burninator!\n\nSign this message to authenticate.\n\nNonce: ${nonce}`;
         
         // 3. Sign message with wallet
+        console.log('📝 Requesting signature...');
         const encodedMessage = new TextEncoder().encode(message);
         const signature = await signMessage(encodedMessage);
+        console.log('✅ Message signed');
 
         // 4. Authenticate with NextAuth
+        console.log('🔑 Submitting to NextAuth...');
         const result = await signIn('solana', {
           publicKey: publicKey.toString(),
           signature: bs58.encode(signature),
@@ -53,12 +62,18 @@ export function WalletConnectButton() {
         });
 
         if (result?.error) {
-          console.error('Authentication failed:', result.error);
+          console.error('❌ Authentication failed:', result.error);
+          alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
+          await disconnect();
+        } else {
+          console.log('✅ Authentication successful!');
+        }
+      } catch (error: any) {
+        console.error('❌ Authentication error:', error);
+        // Only disconnect if user didn't cancel the signature
+        if (error?.message !== 'User rejected the request.') {
           await disconnect();
         }
-      } catch (error) {
-        console.error('Authentication error:', error);
-        await disconnect();
       } finally {
         setIsAuthenticating(false);
       }
