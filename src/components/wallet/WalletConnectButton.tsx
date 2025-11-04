@@ -7,64 +7,41 @@ import { useEffect, useState, useRef } from 'react';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
-  const { publicKey, signMessage, disconnect, wallet, connect, connected } = useWallet();
+  const { publicKey, signMessage, disconnect } = useWallet();
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const operationLockRef = useRef<boolean>(false); // Single lock for ALL operations
+  const hasAttemptedAuthRef = useRef<Set<string>>(new Set());
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Auto-connect wallet when selected (removes the need for "Connect" button click)
-  useEffect(() => {
-    const walletName = wallet?.adapter?.name;
-    
-    if (wallet && !connected && walletName && !operationLockRef.current) {
-      operationLockRef.current = true;
-      console.log('🔌 Starting auto-connect for:', walletName);
-      
-      const timer = setTimeout(() => {
-        connect().catch((error) => {
-          console.error('Auto-connect failed:', error);
-          operationLockRef.current = false;
-        });
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-    
-    if (!wallet) {
-      operationLockRef.current = false;
-    }
-  }, [wallet, connected, connect]);
-
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
-    if (status === 'loading') return;
+    if (status === 'loading' || !mounted) return;
 
     const walletAddress = publicKey?.toString();
     
-    if (!walletAddress || !signMessage || session || operationLockRef.current) {
+    if (!walletAddress || !signMessage || session || hasAttemptedAuthRef.current.has(walletAddress)) {
       return;
     }
 
-    operationLockRef.current = true;
+    // Mark this wallet as attempted IMMEDIATELY
+    hasAttemptedAuthRef.current.add(walletAddress);
     setIsAuthenticating(true);
     console.log('🔒 Starting authentication for:', walletAddress);
     
     async function authenticate() {
       if (!signMessage) {
         console.error('❌ signMessage function is not available');
-        operationLockRef.current = false;
+        hasAttemptedAuthRef.current.delete(walletAddress);
         setIsAuthenticating(false);
         return;
       }
       
       try {
-
         // 1. Get nonce from server
         const nonceRes = await fetch('/api/auth/nonce');
         if (!nonceRes.ok) {
@@ -94,14 +71,14 @@ export function WalletConnectButton() {
         if (result?.error) {
           console.error('❌ Authentication failed:', result.error);
           alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
-          operationLockRef.current = false;
+          hasAttemptedAuthRef.current.delete(walletAddress);
           await disconnect();
         } else {
           console.log('✅ Authentication successful!');
         }
       } catch (error: any) {
         console.error('❌ Authentication error:', error);
-        operationLockRef.current = false;
+        hasAttemptedAuthRef.current.delete(walletAddress);
         if (error?.message !== 'User rejected the request.') {
           await disconnect();
         }
@@ -111,11 +88,11 @@ export function WalletConnectButton() {
     }
 
     authenticate();
-  }, [publicKey, signMessage, session, status]);
+  }, [publicKey, signMessage, session, status, mounted]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
-    operationLockRef.current = false;
+    hasAttemptedAuthRef.current.clear();
     setIsAuthenticating(false);
     await signOut({ redirect: false });
     await disconnect();
