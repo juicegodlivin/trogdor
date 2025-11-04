@@ -3,6 +3,7 @@ import { inter, caveat, jetbrainsMono } from '@/config/fonts';
 import { TRPCProvider } from '@/lib/trpc/Provider';
 import { WalletProvider } from '@/components/providers/WalletProvider';
 import { SessionProvider } from '@/components/providers/SessionProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -44,40 +45,42 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-white" suppressHydrationWarning>
-        <SessionProvider>
-          <WalletProvider>
-            <TRPCProvider>
-              {children}
-              <Toaster 
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#fff',
-                    color: '#2d2d2d',
-                    border: '2px solid #2d2d2d',
-                    borderRadius: '4px',
-                    fontFamily: 'var(--font-jetbrains-mono)',
-                  },
-                  success: {
-                    iconTheme: {
-                      primary: '#10b981',
-                      secondary: '#fff',
+        <ErrorBoundary>
+          <SessionProvider>
+            <WalletProvider>
+              <TRPCProvider>
+                {children}
+                <Toaster 
+                  position="top-right"
+                  toastOptions={{
+                    duration: 4000,
+                    style: {
+                      background: '#fff',
+                      color: '#2d2d2d',
+                      border: '2px solid #2d2d2d',
+                      borderRadius: '4px',
+                      fontFamily: 'var(--font-jetbrains-mono)',
                     },
-                  },
-                  error: {
-                    iconTheme: {
-                      primary: '#ef4444',
-                      secondary: '#fff',
+                    success: {
+                      iconTheme: {
+                        primary: '#10b981',
+                        secondary: '#fff',
+                      },
                     },
-                  },
-                }}
-              />
-              <Analytics />
-              <SpeedInsights />
-            </TRPCProvider>
-          </WalletProvider>
-        </SessionProvider>
+                    error: {
+                      iconTheme: {
+                        primary: '#ef4444',
+                        secondary: '#fff',
+                      },
+                    },
+                  }}
+                />
+                <Analytics />
+                <SpeedInsights />
+              </TRPCProvider>
+            </WalletProvider>
+          </SessionProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

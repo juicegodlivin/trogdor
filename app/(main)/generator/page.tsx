@@ -3,6 +3,7 @@
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
+import { ComponentErrorBoundary } from '@/components/ErrorBoundary';
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { trpc } from '@/lib/trpc/client';
@@ -62,7 +63,8 @@ export default function GeneratorPage() {
   return (
     <div className="min-h-screen notebook-paper">
       <Header />
-      <main className="container mx-auto px-4 py-12">
+      <ComponentErrorBoundary componentName="Image Generator">
+        <main className="container mx-auto px-4 py-12">
         {/* Page Header */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center gap-4 mb-4">
@@ -283,6 +285,7 @@ export default function GeneratorPage() {
           </div>
         </div>
       </main>
+      </ComponentErrorBoundary>
       <Footer />
     </div>
   );
