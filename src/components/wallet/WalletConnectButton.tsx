@@ -66,7 +66,7 @@ export function WalletConnectButton() {
         // 4. Authenticate with NextAuth
         console.log('🔑 Submitting to NextAuth...');
         const result = await signIn('solana', {
-          publicKey: publicKey.toString(),
+          publicKey: walletAddress,
           signature: bs58.encode(signature),
           message,
           redirect: false,
