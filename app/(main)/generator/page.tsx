@@ -11,6 +11,9 @@ import { trpc } from '@/lib/trpc/client';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 export default function GeneratorPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
