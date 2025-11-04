@@ -79,12 +79,16 @@ function StatCard({
   isLoading, 
   error 
 }: { 
-  value?: number; 
+  value?: number | string; 
   label: string; 
   color: string; 
   isLoading: boolean; 
   error: any;
 }) {
+  const displayValue = typeof value === 'number' 
+    ? value.toLocaleString() 
+    : value || '0';
+    
   return (
     <div className="border-sketch border-pencil p-4">
       <div className={`text-4xl font-bold ${color}`}>
@@ -93,7 +97,7 @@ function StatCard({
         ) : error ? (
           <span className="text-2xl">---</span>
         ) : (
-          value?.toLocaleString() || '0'
+          displayValue
         )}
       </div>
       <div className="text-sm text-pencil mt-2">
