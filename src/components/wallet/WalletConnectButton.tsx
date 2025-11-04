@@ -11,8 +11,7 @@ export function WalletConnectButton() {
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const authAttemptRef = useRef<string | null>(null);
-  const connectAttemptRef = useRef<string | null>(null);
+  const operationLockRef = useRef<boolean>(false); // Single lock for ALL operations
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
@@ -23,72 +22,48 @@ export function WalletConnectButton() {
   useEffect(() => {
     const walletName = wallet?.adapter?.name;
     
-    // MUTEX LOCK: If ref is not null, a connection is already in progress
-    if (wallet && !connected && !isAuthenticating && walletName && connectAttemptRef.current === null) {
-      // Set lock IMMEDIATELY
-      connectAttemptRef.current = walletName;
-      console.log('🔌 Connect lock acquired for:', walletName);
+    if (wallet && !connected && walletName && !operationLockRef.current) {
+      operationLockRef.current = true;
+      console.log('🔌 Starting auto-connect for:', walletName);
       
-      // Add small delay to let wallet adapter initialize
       const timer = setTimeout(() => {
         connect().catch((error) => {
           console.error('Auto-connect failed:', error);
-          connectAttemptRef.current = null; // Allow retry on error
+          operationLockRef.current = false;
         });
       }, 100);
       
       return () => clearTimeout(timer);
     }
     
-    // Reset when wallet is disconnected
     if (!wallet) {
-      connectAttemptRef.current = null;
+      operationLockRef.current = false;
     }
-  }, [wallet, connected, connect, isAuthenticating]);
+  }, [wallet, connected, connect]);
 
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
-    let cancelled = false;
-    
-    // Wait for session to load before checking
-    if (status === 'loading') {
-      return;
-    }
+    if (status === 'loading') return;
 
-    // Get current wallet address
     const walletAddress = publicKey?.toString();
     
-    // Don't authenticate if:
-    // - No wallet connected
-    // - No sign function
-    // - Already have a session
-    // - ANY authentication is in progress (check ref is not null)
-    if (!walletAddress || !signMessage || session || authAttemptRef.current !== null) {
+    if (!walletAddress || !signMessage || session || operationLockRef.current) {
       return;
     }
 
-    // CRITICAL: Set the lock IMMEDIATELY and SYNCHRONOUSLY before any async operations
-    // Using a non-null value acts as a lock preventing concurrent effect runs
-    authAttemptRef.current = walletAddress;
+    operationLockRef.current = true;
     setIsAuthenticating(true);
-    console.log('🔒 Auth lock acquired for:', walletAddress);
+    console.log('🔒 Starting authentication for:', walletAddress);
     
     async function authenticate() {
-      if (cancelled) {
-        console.log('⚠️ Auth cancelled (component unmounted)');
-        setIsAuthenticating(false);
-        return;
-      }
-      // Double-check signMessage still exists
       if (!signMessage) {
         console.error('❌ signMessage function is not available');
-        authAttemptRef.current = null;
+        operationLockRef.current = false;
         setIsAuthenticating(false);
         return;
       }
       
       try {
-        console.log('🔐 Starting authentication for wallet:', walletAddress);
 
         // 1. Get nonce from server
         const nonceRes = await fetch('/api/auth/nonce');
@@ -119,15 +94,14 @@ export function WalletConnectButton() {
         if (result?.error) {
           console.error('❌ Authentication failed:', result.error);
           alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
-          authAttemptRef.current = null; // Allow retry
+          operationLockRef.current = false;
           await disconnect();
         } else {
           console.log('✅ Authentication successful!');
         }
       } catch (error: any) {
         console.error('❌ Authentication error:', error);
-        authAttemptRef.current = null; // Allow retry on error
-        // Only disconnect if user didn't cancel the signature
+        operationLockRef.current = false;
         if (error?.message !== 'User rejected the request.') {
           await disconnect();
         }
@@ -137,24 +111,11 @@ export function WalletConnectButton() {
     }
 
     authenticate();
-    
-    // Cleanup function
-    return () => {
-      cancelled = true;
-    };
   }, [publicKey, signMessage, session, status]);
-
-  // Reset auth attempt when wallet disconnects
-  useEffect(() => {
-    if (!publicKey) {
-      authAttemptRef.current = null;
-      setIsAuthenticating(false);
-    }
-  }, [publicKey]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
-    authAttemptRef.current = null;
+    operationLockRef.current = false;
     setIsAuthenticating(false);
     await signOut({ redirect: false });
     await disconnect();
