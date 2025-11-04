@@ -71,14 +71,14 @@ export function WalletConnectButton() {
         if (result?.error) {
           console.error('❌ Authentication failed:', result.error);
           alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
-          hasAttemptedAuthRef.current.delete(walletAddress);
+          if (walletAddress) hasAttemptedAuthRef.current.delete(walletAddress);
           await disconnect();
         } else {
           console.log('✅ Authentication successful!');
         }
       } catch (error: any) {
         console.error('❌ Authentication error:', error);
-        hasAttemptedAuthRef.current.delete(walletAddress);
+        if (walletAddress) hasAttemptedAuthRef.current.delete(walletAddress);
         if (error?.message !== 'User rejected the request.') {
           await disconnect();
         }
