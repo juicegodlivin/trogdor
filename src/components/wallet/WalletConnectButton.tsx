@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
-  const { publicKey, signMessage, disconnect, connected } = useWallet();
+  const { publicKey, signMessage, disconnect, connected, wallet, connect, connecting } = useWallet();
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -16,6 +16,26 @@ export function WalletConnectButton() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Auto-connect when wallet is selected
+  useEffect(() => {
+    if (!mounted || !wallet || connected || connecting) return;
+
+    const walletName = wallet.adapter.name;
+    const connectKey = `trogdor_connect_attempted_${walletName}`;
+    
+    // Check if we already attempted to connect this wallet
+    if (sessionStorage.getItem(connectKey) === 'true') return;
+    
+    // Mark as attempted
+    sessionStorage.setItem(connectKey, 'true');
+    console.log('🔌 Auto-connecting wallet:', walletName);
+    
+    connect().catch((err) => {
+      console.error('Auto-connect failed:', err);
+      sessionStorage.removeItem(connectKey); // Allow retry on error
+    });
+  }, [mounted, wallet, connected, connecting, connect]);
 
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
@@ -97,9 +117,12 @@ export function WalletConnectButton() {
 
   // Handle disconnect
   const handleDisconnect = async () => {
-    // Clear all auth attempts from sessionStorage
+    // Clear all attempts from sessionStorage
     if (publicKey) {
       sessionStorage.removeItem(`trogdor_auth_attempted_${publicKey.toString()}`);
+    }
+    if (wallet) {
+      sessionStorage.removeItem(`trogdor_connect_attempted_${wallet.adapter.name}`);
     }
     setIsAuthenticating(false);
     await signOut({ redirect: false });
