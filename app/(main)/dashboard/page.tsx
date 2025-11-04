@@ -9,6 +9,7 @@ import { MedievalIcon } from '@/components/ui/MedievalIcon';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -37,12 +38,14 @@ export default function DashboardPage() {
       setIsLinking(false);
       setTwitterInput('');
       setLinkError('');
+      toast.success('🐦 Twitter account linked successfully!');
       // Refetch profile to show updated username
       refetchProfile();
     },
     onError: (error) => {
       setLinkError(error.message);
       setIsLinking(false);
+      toast.error(`Failed to link Twitter: ${error.message}`);
     },
   });
 
@@ -50,11 +53,13 @@ export default function DashboardPage() {
   const unlinkTwitterMutation = trpc.user.unlinkTwitter.useMutation({
     onSuccess: () => {
       setLinkError('');
+      toast.success('Twitter account unlinked');
       // Refetch profile to show unlinked state
       refetchProfile();
     },
     onError: (error) => {
       setLinkError(error.message);
+      toast.error(`Failed to unlink Twitter: ${error.message}`);
     },
   });
 

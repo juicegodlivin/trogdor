@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { trpc } from '@/lib/trpc/client';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 
 export default function GeneratorPage() {
   const { data: session } = useSession();
@@ -20,27 +21,40 @@ export default function GeneratorPage() {
       setGeneratedImage(data.imageUrl);
       setIsGenerating(false);
       setError(null);
+      toast.dismiss('generating');
+      toast.success('🔥 Trogdor has been summoned! Your masterpiece is ready!', {
+        duration: 5000,
+      });
     },
     onError: (error) => {
       setError(error.message);
       setIsGenerating(false);
+      toast.dismiss('generating');
+      toast.error(`Burnination failed: ${error.message}`, {
+        duration: 6000,
+      });
     },
   });
 
   const handleGenerate = () => {
     if (!session) {
       setError('Please connect your wallet to generate images');
+      toast.error('Please connect your wallet first!');
       return;
     }
 
     if (!prompt.trim()) {
       setError('Please enter a prompt');
+      toast.error('Please enter a prompt to burninate!');
       return;
     }
 
     setIsGenerating(true);
     setError(null);
     setGeneratedImage(null);
+    toast.loading('Summoning Trogdor from the digital realm...', {
+      id: 'generating',
+    });
 
     generateMutation.mutate({ prompt });
   };

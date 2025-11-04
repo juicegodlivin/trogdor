@@ -3,6 +3,7 @@ import { inter, caveat, jetbrainsMono } from '@/config/fonts';
 import { TRPCProvider } from '@/lib/trpc/Provider';
 import { WalletProvider } from '@/components/providers/WalletProvider';
 import { SessionProvider } from '@/components/providers/SessionProvider';
+import { Toaster } from 'react-hot-toast';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -43,7 +44,34 @@ export default function RootLayout({
       <body className="min-h-screen bg-white" suppressHydrationWarning>
         <SessionProvider>
           <WalletProvider>
-            <TRPCProvider>{children}</TRPCProvider>
+            <TRPCProvider>
+              {children}
+              <Toaster 
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#fff',
+                    color: '#2d2d2d',
+                    border: '2px solid #2d2d2d',
+                    borderRadius: '4px',
+                    fontFamily: 'var(--font-jetbrains-mono)',
+                  },
+                  success: {
+                    iconTheme: {
+                      primary: '#10b981',
+                      secondary: '#fff',
+                    },
+                  },
+                  error: {
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+            </TRPCProvider>
           </WalletProvider>
         </SessionProvider>
       </body>
