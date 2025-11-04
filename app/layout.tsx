@@ -4,6 +4,8 @@ import { TRPCProvider } from '@/lib/trpc/Provider';
 import { WalletProvider } from '@/components/providers/WalletProvider';
 import { SessionProvider } from '@/components/providers/SessionProvider';
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -71,6 +73,8 @@ export default function RootLayout({
                   },
                 }}
               />
+              <Analytics />
+              <SpeedInsights />
             </TRPCProvider>
           </WalletProvider>
         </SessionProvider>
