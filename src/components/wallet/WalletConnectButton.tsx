@@ -52,6 +52,13 @@ export function WalletConnectButton() {
     authAttemptRef.current = walletAddress;
     
     async function authenticate() {
+      // Double-check signMessage still exists
+      if (!signMessage) {
+        console.error('❌ signMessage function is not available');
+        authAttemptRef.current = null;
+        return;
+      }
+      
       try {
         setIsAuthenticating(true);
         
