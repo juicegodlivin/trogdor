@@ -3,59 +3,40 @@
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
-  const { publicKey, signMessage, disconnect, wallet, connect, connected, connecting } = useWallet();
+  const { publicKey, signMessage, disconnect, connected } = useWallet();
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const authLockRef = useRef(false);
-  const connectLockRef = useRef(false);
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Auto-connect when wallet is selected from modal
-  useEffect(() => {
-    if (!mounted || !wallet || connected || connecting || connectLockRef.current) return;
-    
-    // LOCK IMMEDIATELY - prevent any other execution
-    connectLockRef.current = true;
-    
-    const walletName = wallet.adapter.name;
-    console.log('🔌 Wallet selected, connecting...', walletName);
-    
-    connect()
-      .then(() => {
-        console.log('✅ Connected successfully');
-      })
-      .catch((err) => {
-        console.error('Failed to connect wallet:', err);
-        connectLockRef.current = false; // Allow retry on error
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, wallet?.adapter.name, connected, connecting]); // Only depend on primitive values
-
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
-    if (status === 'loading' || !mounted || session || isAuthenticating || authLockRef.current) return;
+    if (!mounted || !connected || session || isAuthenticating || status === 'loading') return;
 
     const walletAddress = publicKey?.toString();
     if (!walletAddress || !signMessage) return;
 
-    // LOCK IMMEDIATELY - prevent any other execution
-    authLockRef.current = true;
+    // Check if we already attempted auth for this wallet in this session
+    const authKey = `trogdor_auth_attempted_${walletAddress}`;
+    if (sessionStorage.getItem(authKey) === 'true') return;
+
+    // Mark as attempted BEFORE starting
+    sessionStorage.setItem(authKey, 'true');
     setIsAuthenticating(true);
     console.log('🔒 Starting authentication for:', walletAddress);
     
     async function authenticate() {
       if (!signMessage) {
         console.error('❌ signMessage function is not available');
-        authLockRef.current = false;
+        sessionStorage.removeItem(authKey);
         setIsAuthenticating(false);
         return;
       }
@@ -89,17 +70,21 @@ export function WalletConnectButton() {
 
         if (result?.error) {
           console.error('❌ Authentication failed:', result.error);
-          alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
-          authLockRef.current = false;
+          sessionStorage.removeItem(authKey);
           await disconnect();
         } else {
           console.log('✅ Authentication successful!');
-          // Keep lock to prevent re-auth
         }
       } catch (error: any) {
         console.error('❌ Authentication error:', error);
-        authLockRef.current = false;
-        if (error?.message !== 'User rejected the request.') {
+        
+        // If user cancels, DON'T retry - keep the session storage flag
+        if (error?.message === 'User rejected the request.') {
+          console.log('⚠️ User cancelled signature - will not retry');
+          await disconnect(); // Disconnect so they can try again fresh
+        } else {
+          // On other errors, allow retry
+          sessionStorage.removeItem(authKey);
           await disconnect();
         }
       } finally {
@@ -108,13 +93,14 @@ export function WalletConnectButton() {
     }
 
     authenticate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicKey?.toString(), session, status, mounted, isAuthenticating]); // Only depend on primitive values
+  }, [connected, publicKey, signMessage, session, status, mounted, isAuthenticating, disconnect]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
-    authLockRef.current = false;
-    connectLockRef.current = false;
+    // Clear all auth attempts from sessionStorage
+    if (publicKey) {
+      sessionStorage.removeItem(`trogdor_auth_attempted_${publicKey.toString()}`);
+    }
     setIsAuthenticating(false);
     await signOut({ redirect: false });
     await disconnect();
