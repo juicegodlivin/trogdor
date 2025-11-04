@@ -104,16 +104,17 @@ export const userRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Rate limit: 5 Twitter linking attempts per hour
       const identifier = `user:${ctx.session.user.id}:twitter-link`;
-      const rateLimit = await checkRateLimit(ctx.redis, identifier, {
+      const rateLimitConfig = {
         max: 5,
         windowMs: 60 * 60 * 1000, // 1 hour
         message: 'Too many Twitter linking attempts. Please try again later.',
-      });
+      };
+      const rateLimit = await checkRateLimit(ctx.redis, identifier, rateLimitConfig);
       
       if (!rateLimit.allowed) {
         throw new TRPCError({
           code: 'TOO_MANY_REQUESTS',
-          message: rateLimit.message || 'Rate limit exceeded',
+          message: rateLimitConfig.message || 'Rate limit exceeded',
         });
       }
 
