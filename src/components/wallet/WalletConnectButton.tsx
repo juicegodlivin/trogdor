@@ -11,11 +11,19 @@ export function WalletConnectButton() {
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [hasAttemptedAuth, setHasAttemptedAuth] = useState(false);
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Reset auth attempt flag when wallet changes
+  useEffect(() => {
+    if (!publicKey) {
+      setHasAttemptedAuth(false);
+    }
+  }, [publicKey]);
 
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
@@ -25,13 +33,14 @@ export function WalletConnectButton() {
         return;
       }
 
-      // Don't authenticate if already have session or no wallet
-      if (!publicKey || !signMessage || session || isAuthenticating) {
+      // Don't authenticate if already have session, no wallet, already authenticating, or already attempted
+      if (!publicKey || !signMessage || session || isAuthenticating || hasAttemptedAuth) {
         return;
       }
 
       try {
         setIsAuthenticating(true);
+        setHasAttemptedAuth(true);
         
         console.log('🔐 Starting authentication for wallet:', publicKey.toString());
 
@@ -64,12 +73,14 @@ export function WalletConnectButton() {
         if (result?.error) {
           console.error('❌ Authentication failed:', result.error);
           alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
+          setHasAttemptedAuth(false); // Allow retry
           await disconnect();
         } else {
           console.log('✅ Authentication successful!');
         }
       } catch (error: any) {
         console.error('❌ Authentication error:', error);
+        setHasAttemptedAuth(false); // Allow retry on error
         // Only disconnect if user didn't cancel the signature
         if (error?.message !== 'User rejected the request.') {
           await disconnect();
@@ -80,7 +91,7 @@ export function WalletConnectButton() {
     }
 
     authenticate();
-  }, [publicKey, signMessage, session, status, isAuthenticating, disconnect]);
+  }, [publicKey, signMessage, session, status]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
