@@ -27,10 +27,21 @@ export default function DashboardPage() {
   );
 
   // Fetch user's generated images
-  const { data: images, isLoading: imagesLoading } = trpc.generator.getHistory.useQuery(
+  const { data: images, isLoading: imagesLoading, refetch: refetchImages } = trpc.generator.getHistory.useQuery(
     { limit: 6, offset: 0 },
     { enabled: !!session }
   );
+
+  // Delete image mutation
+  const deleteImageMutation = trpc.generator.deleteImage.useMutation({
+    onSuccess: () => {
+      // Refetch images after successful delete
+      refetchImages();
+    },
+    onError: (error) => {
+      alert(`Failed to delete image: ${error.message}`);
+    },
+  });
 
   // Link Twitter mutation - MUST be before conditional returns
   const linkTwitterMutation = trpc.user.linkTwitter.useMutation({
@@ -76,6 +87,12 @@ export default function DashboardPage() {
     router.push('/');
     return null;
   }
+
+  const handleDeleteImage = (imageId: string) => {
+    if (confirm('Are you sure you want to delete this image? This cannot be undone.')) {
+      deleteImageMutation.mutate({ imageId });
+    }
+  };
 
   const handleLinkTwitter = () => {
     if (!twitterInput.trim()) {
@@ -312,25 +329,11 @@ export default function DashboardPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {images.images.map((image: any) => (
-                  <div
+                  <ImageCard
                     key={image.id}
-                    className="border-sketch border-pencil overflow-hidden group"
-                  >
-                    <div className="relative aspect-square">
-                      <Image
-                        src={image.imageUrl}
-                        alt={image.prompt}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="p-3 bg-white">
-                      <p className="text-sm line-clamp-2 mb-2">{image.prompt}</p>
-                      <div className="text-xs text-pencil-light">
-                        {new Date(image.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
+                    image={image}
+                    onDelete={() => handleDeleteImage(image.id)}
+                  />
                 ))}
               </div>
               
@@ -403,6 +406,78 @@ function StatCard({
           {suffix}
         </div>
       )}
+    </div>
+  );
+}
+
+interface ImageCardProps {
+  image: {
+    id: string;
+    imageUrl: string;
+    prompt: string;
+    generatedAt: string;
+  };
+  onDelete: () => void;
+}
+
+function ImageCard({ image, onDelete }: ImageCardProps) {
+  const router = useRouter();
+
+  const handleDownload = () => {
+    const link = document.createElement('a');
+    link.href = image.imageUrl;
+    link.download = `trogdor-${image.id}.png`;
+    link.target = '_blank';
+    link.click();
+  };
+
+  const handleReprompt = () => {
+    // Navigate to generator with the original prompt pre-filled
+    router.push(`/generator?prompt=${encodeURIComponent(image.prompt)}`);
+  };
+
+  return (
+    <div className="border-sketch border-pencil overflow-hidden group">
+      <div className="relative aspect-square">
+        <img
+          src={image.imageUrl}
+          alt={image.prompt}
+          className="w-full h-full object-cover"
+        />
+        
+        {/* Hover overlay with actions */}
+        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-4">
+          <div className="flex gap-2">
+            <button
+              onClick={handleReprompt}
+              className="btn-sketch px-3 py-2 bg-accent-blue text-white hover:bg-accent-blue/90 text-sm"
+              title="Reprompt and refine"
+            >
+              ✏️ Reprompt
+            </button>
+            <button
+              onClick={handleDownload}
+              className="btn-sketch px-3 py-2 bg-accent-green text-white hover:bg-accent-green/90 text-sm"
+              title="Download image"
+            >
+              💾 Download
+            </button>
+          </div>
+          <button
+            onClick={onDelete}
+            className="btn-sketch px-3 py-2 bg-accent-red text-white hover:bg-accent-red/90 text-sm w-full"
+            title="Delete image"
+          >
+            🗑️ Delete
+          </button>
+        </div>
+      </div>
+      <div className="p-3 bg-white">
+        <p className="text-sm line-clamp-2 mb-2">{image.prompt}</p>
+        <div className="text-xs text-pencil-light">
+          {new Date(image.generatedAt).toLocaleDateString()}
+        </div>
+      </div>
     </div>
   );
 }

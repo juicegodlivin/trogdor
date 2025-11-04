@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 import { generatedImages } from '@/lib/db/schema';
 import { eq, sql, desc } from 'drizzle-orm';
 import Replicate from 'replicate';
+import { uploadImageFromUrl, deleteImage as deleteImageFromStorage, STORAGE_BUCKET } from '@/lib/storage';
 
 // Log to verify token is loaded (will show in server console)
 console.log('Replicate API Token loaded:', process.env.REPLICATE_API_TOKEN ? 'Yes' : 'No');
@@ -20,10 +21,11 @@ const TROGDOR_CHARACTER_DESCRIPTION = `Trogdor the Burninator, a green S-shaped 
 const STYLE_MODIFIERS = `Hand-drawn cartoon style, bold black outlines, vibrant colors, simple shapes, comic book illustration, dynamic action scene, flames and fire effects`;
 
 // Model Options:
-// - 'black-forest-labs/flux-1.1-pro' (current, best quality & prompt adherence)
+// - 'juicegodlivin/trogdor-the-burninator:6919fb119839d1043e79af7530598bdc6840ea34acdcd1eabc276bbffd4db5d3' (ENHANCED v2 - Better training!)
+// - 'juicegodlivin/trogdor-the-burninator:8e9dc5be7a45090d1a8aed4547c3ee717b3cfcfc55aca84108c98cf78c167291' (v1)
+// - 'black-forest-labs/flux-1.1-pro' (fallback, generic)
 // - 'black-forest-labs/flux-schnell' (faster, cheaper)
-// - 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b' (fallback)
-const GENERATION_MODEL = 'black-forest-labs/flux-1.1-pro';
+const GENERATION_MODEL = 'juicegodlivin/trogdor-the-burninator:6919fb119839d1043e79af7530598bdc6840ea34acdcd1eabc276bbffd4db5d3';
 
 // ================================================
 
@@ -54,8 +56,9 @@ export const generatorRouter = router({
           }
         }
 
-        // Build the complete prompt with character consistency
-        const enhancedPrompt = `${TROGDOR_CHARACTER_DESCRIPTION}, ${input.prompt}. ${STYLE_MODIFIERS}`;
+        // Build the complete prompt using your custom trained model
+        // The model already knows what "Trogdor" looks like from training!
+        const enhancedPrompt = `Trogdor ${input.prompt}. ${STYLE_MODIFIERS}`;
 
         // Call Replicate API
         const output = await replicate.run(
@@ -87,13 +90,27 @@ export const generatorRouter = router({
         // Generate unique replicate ID (Flux doesn't return a prediction ID in sync mode)
         const uniqueReplicateId = `flux-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-        // Save to database
+        // Upload image to permanent Supabase Storage
+        console.log('📤 Uploading image to Supabase Storage...');
+        const fileName = `${ctx.session.user.id}/${uniqueReplicateId}.png`;
+        let permanentImageUrl: string;
+        
+        try {
+          permanentImageUrl = await uploadImageFromUrl(imageUrl, fileName);
+          console.log('✅ Image uploaded successfully:', permanentImageUrl);
+        } catch (uploadError) {
+          console.error('❌ Failed to upload to Supabase, using Replicate URL as fallback:', uploadError);
+          // Fallback to Replicate URL if upload fails
+          permanentImageUrl = imageUrl;
+        }
+
+        // Save to database with permanent URL
         const [generatedImage] = await ctx.db
           .insert(generatedImages)
           .values({
             userId: ctx.session.user.id,
             prompt: input.prompt,
-            imageUrl,
+            imageUrl: permanentImageUrl,
             replicateId: uniqueReplicateId,
             status: 'completed',
             metadata: {
@@ -103,6 +120,7 @@ export const generatorRouter = router({
                 characterDescription: TROGDOR_CHARACTER_DESCRIPTION,
                 originalPrompt: input.prompt,
               },
+              replicateUrl: imageUrl, // Store original URL for reference
             },
           })
           .returning();
@@ -162,6 +180,76 @@ export const generatorRouter = router({
         images,
         hasMore: images.length === input.limit,
       };
+    }),
+
+  // Delete a generated image
+  deleteImage: protectedProcedure
+    .input(
+      z.object({
+        imageId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // First, check if the image belongs to the user
+        const [image] = await ctx.db
+          .select()
+          .from(generatedImages)
+          .where(eq(generatedImages.id, input.imageId))
+          .limit(1);
+
+        if (!image) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Image not found',
+          });
+        }
+
+        if (image.userId !== ctx.session.user.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'You can only delete your own images',
+          });
+        }
+
+        // Delete from Supabase Storage if it's stored there
+        if (image.imageUrl.includes('supabase.co')) {
+          try {
+            // Extract filename from URL
+            const urlParts = image.imageUrl.split('/');
+            const fileName = urlParts.slice(-2).join('/'); // Get userId/filename.png
+            await deleteImageFromStorage(fileName);
+            console.log('✅ Deleted from Supabase Storage:', fileName);
+          } catch (storageError) {
+            console.error('⚠️ Failed to delete from storage (continuing):', storageError);
+            // Don't fail the whole operation if storage delete fails
+          }
+        }
+
+        // Delete from database
+        await ctx.db
+          .delete(generatedImages)
+          .where(eq(generatedImages.id, input.imageId));
+
+        // Remove from Redis cache if exists
+        if (ctx.redis) {
+          const cacheKey = `generated:${input.imageId}`;
+          await ctx.redis.del(cacheKey);
+        }
+
+        return { success: true };
+      } catch (error) {
+        console.error('Delete image error:', error);
+        
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete image',
+        });
+      }
     }),
 });
 

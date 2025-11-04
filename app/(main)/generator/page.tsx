@@ -4,18 +4,33 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
 import { ComponentErrorBoundary } from '@/components/ErrorBoundary';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc/client';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 
 export default function GeneratorPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Pre-fill prompt from URL parameter (for reprompting)
+  useEffect(() => {
+    const promptParam = searchParams.get('prompt');
+    if (promptParam) {
+      setPrompt(promptParam);
+      // Show a toast to let user know they can edit
+      toast('✏️ Editing previous prompt - make your changes and burninate!', {
+        duration: 4000,
+        icon: '🔥',
+      });
+    }
+  }, [searchParams]);
 
   const generateMutation = trpc.generator.generate.useMutation({
     onSuccess: (data) => {
