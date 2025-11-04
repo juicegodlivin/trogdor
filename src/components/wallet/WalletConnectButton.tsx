@@ -12,6 +12,7 @@ export function WalletConnectButton() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
   const hasAttemptedAuthRef = useRef<Set<string>>(new Set());
+  const hasAttemptedConnectRef = useRef<string | null>(null);
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
@@ -22,9 +23,16 @@ export function WalletConnectButton() {
   useEffect(() => {
     if (!mounted || !wallet || connected) return;
     
-    console.log('🔌 Wallet selected, connecting...', wallet.adapter.name);
+    const walletName = wallet.adapter.name;
+    
+    // Prevent double-connect
+    if (hasAttemptedConnectRef.current === walletName) return;
+    hasAttemptedConnectRef.current = walletName;
+    
+    console.log('🔌 Wallet selected, connecting...', walletName);
     connect().catch((err) => {
       console.error('Failed to connect wallet:', err);
+      hasAttemptedConnectRef.current = null; // Allow retry on error
     });
   }, [wallet, connected, connect, mounted]);
 
@@ -103,6 +111,7 @@ export function WalletConnectButton() {
   // Handle disconnect
   const handleDisconnect = async () => {
     hasAttemptedAuthRef.current.clear();
+    hasAttemptedConnectRef.current = null;
     setIsAuthenticating(false);
     await signOut({ redirect: false });
     await disconnect();
