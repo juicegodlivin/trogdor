@@ -21,12 +21,15 @@ export const leaderboardRouter = router({
         // Check cache first (if Redis is available)
         if (ctx.redis) {
           try {
-            const cacheKey = RedisKeys.leaderboard(period);
+            // Include page in cache key for pagination
+            const cacheKey = `${RedisKeys.leaderboard(period)}:page:${page}:limit:${limit}`;
             const cached = await ctx.redis.get(cacheKey);
 
             if (cached) {
+              console.log(`✅ Leaderboard cache HIT: ${cacheKey}`);
               return JSON.parse(cached);
             }
+            console.log(`❌ Leaderboard cache MISS: ${cacheKey}`);
           } catch (redisError) {
             console.error('Redis cache read error:', redisError);
             // Continue without cache
@@ -44,8 +47,9 @@ export const leaderboardRouter = router({
         // Cache for 5 minutes (if Redis is available)
         if (ctx.redis) {
           try {
-            const cacheKey = RedisKeys.leaderboard(period);
+            const cacheKey = `${RedisKeys.leaderboard(period)}:page:${page}:limit:${limit}`;
             await ctx.redis.setex(cacheKey, 300, JSON.stringify(leaderboard));
+            console.log(`💾 Leaderboard cached: ${cacheKey}`);
           } catch (redisError) {
             console.error('Redis cache write error:', redisError);
             // Continue without caching
@@ -62,11 +66,38 @@ export const leaderboardRouter = router({
 
   getTopTen: publicProcedure.query(async ({ ctx }) => {
     try {
+      // Check cache first
+      if (ctx.redis) {
+        try {
+          const cacheKey = 'leaderboard:top10';
+          const cached = await ctx.redis.get(cacheKey);
+          
+          if (cached) {
+            console.log('✅ Top 10 cache HIT');
+            return JSON.parse(cached);
+          }
+          console.log('❌ Top 10 cache MISS');
+        } catch (redisError) {
+          console.error('Redis cache read error:', redisError);
+        }
+      }
+
       const topTen = await ctx.db
         .select()
         .from(users)
         .orderBy(desc(users.totalOfferings))
         .limit(10);
+
+      // Cache for 2 minutes (shorter TTL since it's on homepage)
+      if (ctx.redis) {
+        try {
+          const cacheKey = 'leaderboard:top10';
+          await ctx.redis.setex(cacheKey, 120, JSON.stringify(topTen));
+          console.log('💾 Top 10 cached');
+        } catch (redisError) {
+          console.error('Redis cache write error:', redisError);
+        }
+      }
 
       return topTen;
     } catch (error) {
