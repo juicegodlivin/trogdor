@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { trpc } from '@/lib/trpc/client';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
+import { users } from '@/lib/db/schema';
+
+type User = typeof users.$inferSelect;
 
 export function LeaderboardPreview() {
   const { data: topTen, isLoading, error } = trpc.leaderboard.getTopTen.useQuery();
@@ -39,7 +42,7 @@ export function LeaderboardPreview() {
                 </tr>
               </thead>
               <tbody>
-                {topTen.slice(0, 5).map((user, idx) => (
+                {topTen.slice(0, 5).map((user: User, idx: number) => (
                   <tr
                     key={user.id}
                     className="border-b border-sketch hover:bg-sketch-light"
