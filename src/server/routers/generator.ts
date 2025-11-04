@@ -119,8 +119,8 @@ export const generatorRouter = router({
                 enhancedPrompt,
                 characterDescription: TROGDOR_CHARACTER_DESCRIPTION,
                 originalPrompt: input.prompt,
+                replicateUrl: imageUrl, // Store original URL for reference
               },
-              replicateUrl: imageUrl, // Store original URL for reference
             },
           })
           .returning();
