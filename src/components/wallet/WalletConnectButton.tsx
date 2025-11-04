@@ -7,12 +7,12 @@ import { useEffect, useState, useRef } from 'react';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
-  const { publicKey, signMessage, disconnect, wallet, connect, connected } = useWallet();
+  const { publicKey, signMessage, disconnect, wallet, connect, connected, connecting } = useWallet();
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const hasAttemptedAuthRef = useRef<Set<string>>(new Set());
-  const hasAttemptedConnectRef = useRef<string | null>(null);
+  const authLockRef = useRef(false);
+  const connectLockRef = useRef(false);
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
@@ -21,40 +21,41 @@ export function WalletConnectButton() {
 
   // Auto-connect when wallet is selected from modal
   useEffect(() => {
-    if (!mounted || !wallet || connected) return;
+    if (!mounted || !wallet || connected || connecting || connectLockRef.current) return;
+    
+    // LOCK IMMEDIATELY - prevent any other execution
+    connectLockRef.current = true;
     
     const walletName = wallet.adapter.name;
-    
-    // Prevent double-connect
-    if (hasAttemptedConnectRef.current === walletName) return;
-    hasAttemptedConnectRef.current = walletName;
-    
     console.log('🔌 Wallet selected, connecting...', walletName);
-    connect().catch((err) => {
-      console.error('Failed to connect wallet:', err);
-      hasAttemptedConnectRef.current = null; // Allow retry on error
-    });
-  }, [wallet, connected, connect, mounted]);
+    
+    connect()
+      .then(() => {
+        console.log('✅ Connected successfully');
+      })
+      .catch((err) => {
+        console.error('Failed to connect wallet:', err);
+        connectLockRef.current = false; // Allow retry on error
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, wallet?.adapter.name, connected, connecting]); // Only depend on primitive values
 
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
-    if (status === 'loading' || !mounted) return;
+    if (status === 'loading' || !mounted || session || isAuthenticating || authLockRef.current) return;
 
     const walletAddress = publicKey?.toString();
-    
-    if (!walletAddress || !signMessage || session || hasAttemptedAuthRef.current.has(walletAddress)) {
-      return;
-    }
+    if (!walletAddress || !signMessage) return;
 
-    // Mark this wallet as attempted IMMEDIATELY
-    hasAttemptedAuthRef.current.add(walletAddress);
+    // LOCK IMMEDIATELY - prevent any other execution
+    authLockRef.current = true;
     setIsAuthenticating(true);
     console.log('🔒 Starting authentication for:', walletAddress);
     
     async function authenticate() {
       if (!signMessage) {
         console.error('❌ signMessage function is not available');
-        if (walletAddress) hasAttemptedAuthRef.current.delete(walletAddress);
+        authLockRef.current = false;
         setIsAuthenticating(false);
         return;
       }
@@ -89,14 +90,15 @@ export function WalletConnectButton() {
         if (result?.error) {
           console.error('❌ Authentication failed:', result.error);
           alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
-          if (walletAddress) hasAttemptedAuthRef.current.delete(walletAddress);
+          authLockRef.current = false;
           await disconnect();
         } else {
           console.log('✅ Authentication successful!');
+          // Keep lock to prevent re-auth
         }
       } catch (error: any) {
         console.error('❌ Authentication error:', error);
-        if (walletAddress) hasAttemptedAuthRef.current.delete(walletAddress);
+        authLockRef.current = false;
         if (error?.message !== 'User rejected the request.') {
           await disconnect();
         }
@@ -106,12 +108,13 @@ export function WalletConnectButton() {
     }
 
     authenticate();
-  }, [publicKey, signMessage, session, status, mounted, disconnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicKey?.toString(), session, status, mounted, isAuthenticating]); // Only depend on primitive values
 
   // Handle disconnect
   const handleDisconnect = async () => {
-    hasAttemptedAuthRef.current.clear();
-    hasAttemptedConnectRef.current = null;
+    authLockRef.current = false;
+    connectLockRef.current = false;
     setIsAuthenticating(false);
     await signOut({ redirect: false });
     await disconnect();
