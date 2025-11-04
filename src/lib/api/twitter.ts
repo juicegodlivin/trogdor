@@ -123,6 +123,8 @@ export class TwitterApiClient {
     
     const params = new URLSearchParams({
       userName: cleanUsername,
+      // Request additional user fields including profile image
+      'user.fields': 'profile_image_url,public_metrics,verified',
     });
 
     const endpoint = `/twitter/user/info?${params.toString()}`;
@@ -133,7 +135,12 @@ export class TwitterApiClient {
    * Get user information by ID
    */
   async getUserById(userId: string): Promise<{ data: TwitterUser }> {
-    const endpoint = `/twitter/user/${userId}`;
+    const params = new URLSearchParams({
+      // Request additional user fields including profile image
+      'user.fields': 'profile_image_url,public_metrics,verified',
+    });
+    
+    const endpoint = `/twitter/user/${userId}?${params.toString()}`;
     return this.request<{ data: TwitterUser }>(endpoint);
   }
 }

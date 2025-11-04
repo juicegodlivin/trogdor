@@ -6,7 +6,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
 
 export function LeaderboardPreview() {
-  const { data: topTen, isLoading } = trpc.leaderboard.getTopTen.useQuery();
+  const { data: topTen, isLoading, error } = trpc.leaderboard.getTopTen.useQuery();
 
   return (
     <section className="py-20 px-4">
@@ -19,8 +19,14 @@ export function LeaderboardPreview() {
         </div>
 
         {isLoading ? (
-          <LoadingSpinner />
-        ) : (
+          <div className="flex justify-center py-12">
+            <LoadingSpinner />
+          </div>
+        ) : error ? (
+          <div className="border-sketch border-pencil bg-red-50 p-8 text-center">
+            <p className="text-pencil">Failed to load leaderboard</p>
+          </div>
+        ) : topTen && topTen.length > 0 ? (
           <div className="border-sketch border-pencil bg-white">
             <table className="w-full">
               <thead className="bg-sketch border-b-2 border-pencil">
@@ -33,7 +39,7 @@ export function LeaderboardPreview() {
                 </tr>
               </thead>
               <tbody>
-                {topTen?.slice(0, 5).map((user, idx) => (
+                {topTen.slice(0, 5).map((user, idx) => (
                   <tr
                     key={user.id}
                     className="border-b border-sketch hover:bg-sketch-light"
@@ -53,12 +59,24 @@ export function LeaderboardPreview() {
                       {user.username || `${user.walletAddress.slice(0, 6)}...`}
                     </td>
                     <td className="p-4 text-right text-2xl font-bold text-accent-green">
-                      {user.totalOfferings}
+                      {user.totalOfferings.toLocaleString()}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : (
+          <div className="border-sketch border-pencil bg-white p-12 text-center">
+            <div className="flex justify-center mb-4">
+              <MedievalIcon name="throne" size={64} />
+            </div>
+            <p className="font-hand text-2xl text-pencil-light mb-2">
+              No cultists yet!
+            </p>
+            <p className="text-pencil">
+              Be the first to join the leaderboard
+            </p>
           </div>
         )}
       </div>

@@ -107,14 +107,16 @@ export default function DashboardPage() {
           {/* Profile Card */}
           <div className="lg:col-span-1">
             <div className="border-sketch border-pencil p-6 notebook-paper">
-              <div className="flex items-center justify-center w-24 h-24 mx-auto mb-4 border-sketch bg-accent-green/20">
-                <Image
-                  src="/images/trogdor/Trogdor the Burninator.png"
-                  alt="Trogdor"
-                  width={96}
-                  height={96}
-                  className="object-contain"
-                />
+              <div className="flex items-center justify-center w-24 h-24 mx-auto mb-4 border-sketch bg-accent-green/20 rounded-full overflow-hidden">
+                {profile && (
+                  <Image
+                    src={profile.profileImage || '/images/pepe-placeholder.svg'}
+                    alt={profile.username || 'User avatar'}
+                    width={96}
+                    height={96}
+                    className="object-cover w-full h-full"
+                  />
+                )}
               </div>
               <h2 className="font-hand text-2xl text-center mb-4">
                 {profile?.username || 'Cult Member'}
@@ -192,7 +194,7 @@ export default function DashboardPage() {
                   <MedievalIcon name="torch" size={20} />
                   <div>
                     <strong>Pro Tip:</strong> Tweet your generated art with{' '}
-                    <code className="font-mono bg-white px-1">@TrogdorOnSol</code> to earn
+                    <code className="font-mono bg-white px-1">@trogdorcult</code> to earn
                     leaderboard points!
                   </div>
                 </div>
@@ -273,7 +275,7 @@ export default function DashboardPage() {
                   <p className="mb-2">No mentions yet!</p>
                   <p className="text-sm">
                     {isTwitterLinked
-                      ? 'Tweet about Trogdor and tag @TrogdorOnSol to get started.'
+                      ? 'Tweet about Trogdor and tag @trogdorcult to get started.'
                       : 'Link your X account to start tracking mentions.'}
                   </p>
                 </div>

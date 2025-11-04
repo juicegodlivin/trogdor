@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
+import { trpc } from '@/lib/trpc/client';
 
 export function Footer() {
+  const { data: stats } = trpc.stats.getGlobalStats.useQuery();
   return (
     <footer className="border-t-2 border-pencil bg-white mt-20">
       <div className="container mx-auto px-4 py-12">
@@ -47,18 +51,13 @@ export function Footer() {
             <h3 className="font-hand text-2xl mb-4">Community</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="hover:text-accent-blue">
-                  Twitter
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-accent-blue">
-                  Discord
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-accent-blue">
-                  Telegram
+                <a 
+                  href="https://twitter.com/trogdorcult" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-accent-blue"
+                >
+                  X Account
                 </a>
               </li>
             </ul>
@@ -70,15 +69,21 @@ export function Footer() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Cult Members</span>
-                <span className="font-bold">---</span>
+                <span className="font-bold">
+                  {stats?.cultMembers?.toLocaleString() || '0'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Total Offerings</span>
-                <span className="font-bold text-accent-green">---</span>
+                <span className="font-bold text-accent-green">
+                  {stats?.totalOfferings?.toLocaleString() || '0'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Images Generated</span>
-                <span className="font-bold">---</span>
+                <span className="font-bold">
+                  {stats?.imagesGenerated?.toLocaleString() || '0'}
+                </span>
               </div>
             </div>
           </div>

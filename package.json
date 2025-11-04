@@ -13,9 +13,11 @@
     "db:migrate-prod": "tsx scripts/migrate-production.ts",
     "db:studio": "drizzle-kit studio",
     "db:verify": "npx tsx --env-file=.env.local scripts/verify-db-tables.ts",
+    "db:remove-mock": "tsx --env-file=.env.local scripts/remove-mock-data.ts",
     "setup:webhooks": "tsx scripts/setup-webhooks.ts",
     "train-lora": "tsx scripts/train-trogdor-lora.ts",
-    "twitter:fetch": "tsx --env-file=.env.local scripts/fetch-mentions.ts"
+    "twitter:fetch": "tsx --env-file=.env.local scripts/fetch-mentions.ts",
+    "test:cron": "npx tsx --env-file=.env.local scripts/test-cron-endpoint.ts"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",

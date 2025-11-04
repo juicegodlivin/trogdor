@@ -262,7 +262,7 @@ export default function GeneratorPage() {
               <li className="flex items-start">
                 <span className="font-hand text-xl mr-3">4.</span>
                 <span>
-                  <strong>Tweet your creation</strong> with <code className="bg-yellow-50 px-2 py-1">@TrogdorOnSol</code> to enter the leaderboard
+                  <strong>Tweet your creation</strong> with <code className="bg-yellow-50 px-2 py-1">@trogdorcult</code> to enter the leaderboard
                 </span>
               </li>
             </ol>

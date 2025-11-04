@@ -1,7 +1,11 @@
+'use client';
+
 import Image from 'next/image';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
+import { trpc } from '@/lib/trpc/client';
 
 export function HeroSection() {
+  const { data: stats } = trpc.stats.getGlobalStats.useQuery();
   return (
     <section className="text-center space-y-8 py-20 px-4">
       {/* Logo/Icon */}
@@ -42,15 +46,21 @@ export function HeroSection() {
       {/* Stats Preview */}
       <div className="pt-12 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
         <div className="border-sketch border-pencil p-4">
-          <div className="text-4xl font-bold text-accent-green">---</div>
+          <div className="text-4xl font-bold text-accent-green">
+            {stats?.cultMembers?.toLocaleString() || '0'}
+          </div>
           <div className="text-sm text-pencil mt-2">Cult Members</div>
         </div>
         <div className="border-sketch border-pencil p-4">
-          <div className="text-4xl font-bold text-accent-red">---</div>
+          <div className="text-4xl font-bold text-accent-red">
+            {stats?.totalOfferings?.toLocaleString() || '0'}
+          </div>
           <div className="text-sm text-pencil mt-2">Offerings</div>
         </div>
         <div className="border-sketch border-pencil p-4">
-          <div className="text-4xl font-bold text-accent-yellow">---</div>
+          <div className="text-4xl font-bold text-accent-yellow">
+            {stats?.imagesGenerated?.toLocaleString() || '0'}
+          </div>
           <div className="text-sm text-pencil mt-2">Burninations</div>
         </div>
       </div>

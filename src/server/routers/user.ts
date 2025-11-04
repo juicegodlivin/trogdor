@@ -64,6 +64,7 @@ export const userRouter = router({
       username: user.username,
       twitterId: user.twitterId,
       twitterUsername: user.twitterHandle,
+      profileImage: user.profileImage,
       totalScore: user.totalOfferings,
       totalMentions: mentionsCount?.count || 0,
       averageScore: avgScore?.avg ? parseFloat(avgScore.avg.toString()) : 0,
@@ -103,10 +104,12 @@ export const userRouter = router({
       const cleanUsername = input.twitterUsername.replace(/^@/, '');
 
       try {
-        // Fetch user info from Twitter API to get their ID
+        // Fetch user info from Twitter API to get their ID and profile image
         console.log(`🔍 Looking up Twitter user: @${cleanUsername}`);
         const twitterApi = getTwitterApi();
         const response = await twitterApi.getUserByUsername(cleanUsername);
+        
+        console.log('📦 Full Twitter API Response:', JSON.stringify(response, null, 2));
         
         if (!response.data) {
           throw new Error('Twitter user not found. Please check the username and try again.');
@@ -114,8 +117,11 @@ export const userRouter = router({
 
         const twitterId = response.data.id;
         const twitterName = response.data.name;
+        const profileImageUrl = response.data.profile_image_url;
         
         console.log(`✅ Found Twitter user: @${cleanUsername} (ID: ${twitterId})`);
+        console.log(`📸 Profile image URL: ${profileImageUrl || 'NOT FOUND IN RESPONSE'}`);
+        console.log(`📋 Available fields:`, Object.keys(response.data));
 
         // Check if this Twitter ID is already linked to another wallet
         const existingUserWithId = await ctx.db
@@ -141,13 +147,14 @@ export const userRouter = router({
           throw new Error('This Twitter username is already linked to another wallet');
         }
 
-        // Update user's Twitter info - now includes ID!
+        // Update user's Twitter info - now includes ID and profile image!
         const [updated] = await ctx.db
           .update(users)
           .set({ 
             twitterHandle: cleanUsername,
             twitterId: twitterId,
             username: twitterName || cleanUsername, // Use real name if available
+            profileImage: profileImageUrl || null,
           })
           .where(eq(users.id, ctx.session.user.id))
           .returning();
@@ -178,6 +185,7 @@ export const userRouter = router({
       .set({
         twitterHandle: null,
         twitterId: null,
+        profileImage: null,
       })
       .where(eq(users.id, ctx.session.user.id))
       .returning();

@@ -104,7 +104,7 @@ export default function ProductsPage() {
             </div>
             <p className="text-lg text-pencil mb-6">
               Want to see your Trogdor art featured? Generate art using our AI tool, 
-              tweet it with <code className="bg-yellow-50 px-2 py-1 font-mono">@TrogdorOnSol</code>, 
+              tweet it with <code className="bg-yellow-50 px-2 py-1 font-mono">@trogdorcult</code>, 
               and climb the leaderboard!
             </p>
             <div className="grid md:grid-cols-2 gap-6">

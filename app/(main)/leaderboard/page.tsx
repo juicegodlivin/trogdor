@@ -15,11 +15,14 @@ export default function LeaderboardPage() {
   const [period, setPeriod] = useState<Period>('alltime');
   const [page, setPage] = useState(1);
 
-  const { data: leaderboard, isLoading } =
+  const { data: leaderboard, isLoading, error, refetch } =
     trpc.leaderboard.getLeaderboard.useQuery({
       period,
       page,
       limit: 50,
+    }, {
+      refetchOnWindowFocus: false,
+      refetchOnMount: true,
     });
 
   return (
@@ -97,7 +100,27 @@ export default function LeaderboardPage() {
 
         {/* Leaderboard Table */}
         {isLoading ? (
-          <LoadingSpinner />
+          <div className="flex justify-center py-12">
+            <LoadingSpinner />
+          </div>
+        ) : error ? (
+          <div className="border-sketch border-pencil bg-red-50 p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <MedievalIcon name="flag" size={64} />
+            </div>
+            <h3 className="font-hand text-2xl mb-2 text-accent-red">
+              Burnination Failed!
+            </h3>
+            <p className="text-pencil mb-4">
+              {error.message || 'Failed to load leaderboard'}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="btn-sketch px-6 py-3 bg-accent-green text-white hover:bg-accent-green/90"
+            >
+              Try Again
+            </button>
+          </div>
         ) : (
           <div className="border-sketch border-pencil bg-white overflow-hidden">
             <table className="w-full">
@@ -143,9 +166,14 @@ export default function LeaderboardPage() {
                                 <img
                                   src={user.profileImage}
                                   alt={user.username || 'User'}
+                                  className="w-full h-full object-cover"
                                 />
                               ) : (
-                                <MedievalIcon name="knight" size={24} />
+                                <img
+                                  src="/images/pepe-placeholder.svg"
+                                  alt="Pepe avatar"
+                                  className="w-full h-full object-cover"
+                                />
                               )}
                             </div>
                             <div>
@@ -191,8 +219,11 @@ export default function LeaderboardPage() {
                       <div className="flex justify-center mb-4">
                         <MedievalIcon name="throne" size={64} />
                       </div>
-                      <p className="font-hand text-2xl">
+                      <p className="font-hand text-2xl mb-2">
                         No cultists yet. Be the first to join!
+                      </p>
+                      <p className="text-pencil">
+                        Connect your wallet and start burninating to claim the #1 spot!
                       </p>
                     </td>
                   </tr>
