@@ -15,6 +15,14 @@ export function WalletConnectButton() {
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
+    
+    // Clear connect attempts on mount (allows fresh attempts on page reload)
+    const keys = Object.keys(sessionStorage);
+    keys.forEach(key => {
+      if (key.startsWith('trogdor_connect_attempted_')) {
+        sessionStorage.removeItem(key);
+      }
+    });
   }, []);
 
   // Auto-connect when wallet is selected
@@ -31,10 +39,19 @@ export function WalletConnectButton() {
     sessionStorage.setItem(connectKey, 'true');
     console.log('🔌 Auto-connecting wallet:', walletName);
     
-    connect().catch((err) => {
-      console.error('Auto-connect failed:', err);
-      sessionStorage.removeItem(connectKey); // Allow retry on error
-    });
+    // Add small delay to ensure wallet adapter is ready
+    const timer = setTimeout(() => {
+      connect()
+        .then(() => {
+          console.log('✅ Auto-connect successful');
+        })
+        .catch((err) => {
+          console.error('Auto-connect failed:', err);
+          sessionStorage.removeItem(connectKey); // Allow retry on error
+        });
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [mounted, wallet, connected, connecting, connect]);
 
   // Auto-authenticate when wallet connects (only if no session exists)
