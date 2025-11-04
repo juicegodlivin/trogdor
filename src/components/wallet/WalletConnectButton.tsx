@@ -12,6 +12,7 @@ export function WalletConnectButton() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
   const authAttemptRef = useRef<string | null>(null);
+  const connectAttemptRef = useRef<string | null>(null);
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
@@ -20,11 +21,21 @@ export function WalletConnectButton() {
 
   // Auto-connect wallet when selected (removes the need for "Connect" button click)
   useEffect(() => {
-    if (wallet && !connected && !isAuthenticating) {
-      console.log('🔌 Auto-connecting wallet:', wallet.adapter.name);
+    const walletName = wallet?.adapter?.name;
+    
+    if (wallet && !connected && !isAuthenticating && walletName && connectAttemptRef.current !== walletName) {
+      connectAttemptRef.current = walletName;
+      console.log('🔌 Auto-connecting wallet:', walletName);
+      
       connect().catch((error) => {
         console.error('Auto-connect failed:', error);
+        connectAttemptRef.current = null; // Allow retry on error
       });
+    }
+    
+    // Reset when wallet is disconnected
+    if (!wallet) {
+      connectAttemptRef.current = null;
     }
   }, [wallet, connected, connect, isAuthenticating]);
 
