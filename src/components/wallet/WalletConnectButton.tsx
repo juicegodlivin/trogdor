@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
-  const { publicKey, signMessage, disconnect } = useWallet();
+  const { publicKey, signMessage, disconnect, wallet, connect, connected } = useWallet();
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -18,30 +18,41 @@ export function WalletConnectButton() {
     setMounted(true);
   }, []);
 
+  // Auto-connect wallet when selected (removes the need for "Connect" button click)
+  useEffect(() => {
+    if (wallet && !connected && !isAuthenticating) {
+      console.log('🔌 Auto-connecting wallet:', wallet.adapter.name);
+      connect().catch((error) => {
+        console.error('Auto-connect failed:', error);
+      });
+    }
+  }, [wallet, connected, connect, isAuthenticating]);
+
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
+    // Wait for session to load before checking
+    if (status === 'loading') {
+      return;
+    }
+
+    // Get current wallet address
+    const walletAddress = publicKey?.toString();
+    
+    // Don't authenticate if:
+    // - No wallet connected
+    // - No sign function
+    // - Already have a session
+    // - Currently authenticating
+    // - Already attempted auth for this wallet
+    if (!walletAddress || !signMessage || session || isAuthenticating || authAttemptRef.current === walletAddress) {
+      return;
+    }
+
+    // Mark this wallet as being authenticated IMMEDIATELY (before async)
+    authAttemptRef.current = walletAddress;
+    
     async function authenticate() {
-      // Wait for session to load before checking
-      if (status === 'loading') {
-        return;
-      }
-
-      // Get current wallet address
-      const walletAddress = publicKey?.toString();
-      
-      // Don't authenticate if:
-      // - No wallet connected
-      // - No sign function
-      // - Already have a session
-      // - Currently authenticating
-      // - Already attempted auth for this wallet
-      if (!walletAddress || !signMessage || session || isAuthenticating || authAttemptRef.current === walletAddress) {
-        return;
-      }
-
       try {
-        // Mark this wallet as being authenticated (using ref to prevent re-renders)
-        authAttemptRef.current = walletAddress;
         setIsAuthenticating(true);
         
         console.log('🔐 Starting authentication for wallet:', walletAddress);
@@ -99,11 +110,14 @@ export function WalletConnectButton() {
   useEffect(() => {
     if (!publicKey) {
       authAttemptRef.current = null;
+      setIsAuthenticating(false);
     }
   }, [publicKey]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
+    authAttemptRef.current = null;
+    setIsAuthenticating(false);
     await signOut({ redirect: false });
     await disconnect();
   };
