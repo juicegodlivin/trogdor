@@ -3,7 +3,7 @@
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
@@ -11,19 +11,12 @@ export function WalletConnectButton() {
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [hasAttemptedAuth, setHasAttemptedAuth] = useState(false);
+  const authAttemptRef = useRef<string | null>(null);
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Reset auth attempt flag when wallet changes
-  useEffect(() => {
-    if (!publicKey) {
-      setHasAttemptedAuth(false);
-    }
-  }, [publicKey]);
 
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
@@ -33,16 +26,25 @@ export function WalletConnectButton() {
         return;
       }
 
-      // Don't authenticate if already have session, no wallet, already authenticating, or already attempted
-      if (!publicKey || !signMessage || session || isAuthenticating || hasAttemptedAuth) {
+      // Get current wallet address
+      const walletAddress = publicKey?.toString();
+      
+      // Don't authenticate if:
+      // - No wallet connected
+      // - No sign function
+      // - Already have a session
+      // - Currently authenticating
+      // - Already attempted auth for this wallet
+      if (!walletAddress || !signMessage || session || isAuthenticating || authAttemptRef.current === walletAddress) {
         return;
       }
 
       try {
+        // Mark this wallet as being authenticated (using ref to prevent re-renders)
+        authAttemptRef.current = walletAddress;
         setIsAuthenticating(true);
-        setHasAttemptedAuth(true);
         
-        console.log('🔐 Starting authentication for wallet:', publicKey.toString());
+        console.log('🔐 Starting authentication for wallet:', walletAddress);
 
         // 1. Get nonce from server
         const nonceRes = await fetch('/api/auth/nonce');
@@ -73,14 +75,14 @@ export function WalletConnectButton() {
         if (result?.error) {
           console.error('❌ Authentication failed:', result.error);
           alert(`Authentication failed: ${result.error}\n\nPlease try disconnecting and reconnecting your wallet.`);
-          setHasAttemptedAuth(false); // Allow retry
+          authAttemptRef.current = null; // Allow retry
           await disconnect();
         } else {
           console.log('✅ Authentication successful!');
         }
       } catch (error: any) {
         console.error('❌ Authentication error:', error);
-        setHasAttemptedAuth(false); // Allow retry on error
+        authAttemptRef.current = null; // Allow retry on error
         // Only disconnect if user didn't cancel the signature
         if (error?.message !== 'User rejected the request.') {
           await disconnect();
@@ -92,6 +94,13 @@ export function WalletConnectButton() {
 
     authenticate();
   }, [publicKey, signMessage, session, status]);
+
+  // Reset auth attempt when wallet disconnects
+  useEffect(() => {
+    if (!publicKey) {
+      authAttemptRef.current = null;
+    }
+  }, [publicKey]);
 
   // Handle disconnect
   const handleDisconnect = async () => {
