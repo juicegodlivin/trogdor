@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
-  const { publicKey, signMessage, disconnect } = useWallet();
+  const { publicKey, signMessage, disconnect, wallet, connect, connected } = useWallet();
   const { data: session, status } = useSession();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -17,6 +17,16 @@ export function WalletConnectButton() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Auto-connect when wallet is selected from modal
+  useEffect(() => {
+    if (!mounted || !wallet || connected) return;
+    
+    console.log('🔌 Wallet selected, connecting...', wallet.adapter.name);
+    connect().catch((err) => {
+      console.error('Failed to connect wallet:', err);
+    });
+  }, [wallet, connected, connect, mounted]);
 
   // Auto-authenticate when wallet connects (only if no session exists)
   useEffect(() => {
