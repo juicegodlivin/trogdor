@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
 import { trpc } from '@/lib/trpc/client';
 
@@ -14,6 +15,17 @@ export function HeroSection() {
         <Image
           src="/images/trogdor/Trogdor the Burninator.png"
           alt="Trogdor the Burninator"
+          width={500}
+          height={500}
+          className="w-48 sm:w-56 md:w-64 lg:w-full h-auto"
+        />
+      </div>
+
+      {/* Burning Peasant on the right - balances Trogdor on the left */}
+      <div className="lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2 lg:pointer-events-none lg:z-0 flex justify-center lg:justify-end mb-8 lg:mb-0 lg:w-[300px] xl:w-[400px] 2xl:w-[500px]">
+        <Image
+          src="/images/trogdor/Peasant Burninating.png"
+          alt="Peasant being burninated"
           width={500}
           height={500}
           className="w-48 sm:w-56 md:w-64 lg:w-full h-auto"
@@ -34,15 +46,15 @@ export function HeroSection() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-        <button className="btn-sketch text-xl px-8 py-4 bg-accent-green text-white hover:bg-accent-green/90 flex items-center justify-center gap-3">
-          <MedievalIcon name="torch" size={28} />
-          Sign the Ledger
-        </button>
-        <button className="btn-sketch text-xl px-8 py-4 hover:bg-sketch flex items-center justify-center gap-3">
-          <MedievalIcon name="scroll" size={28} />
-          Learn the Lore
-        </button>
-      </div>
+          <Link href="/dashboard" className="btn-sketch text-xl px-8 py-4 bg-accent-green text-white hover:bg-accent-green/90 flex items-center justify-center gap-3">
+            <MedievalIcon name="torch" size={28} />
+            Sign the Ledger
+          </Link>
+          <Link href="/history" className="btn-sketch text-xl px-8 py-4 hover:bg-sketch flex items-center justify-center gap-3">
+            <MedievalIcon name="scroll" size={28} />
+            Learn the Lore
+          </Link>
+        </div>
 
         {/* Stats Preview */}
         <div className="pt-12 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
