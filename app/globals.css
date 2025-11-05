@@ -9,8 +9,48 @@
   }
   
   body {
-    @apply bg-white text-foreground;
+    @apply bg-white text-foreground font-body text-xl;
     font-feature-settings: "cv05", "cv09";
+    font-weight: 600;
+  }
+  
+  /* Increase paragraph and body text sizes for readability */
+  p {
+    @apply text-2xl;
+    font-weight: 600;
+  }
+  
+  /* List items slightly smaller than paragraphs */
+  li {
+    @apply text-xl;
+    font-weight: 600;
+  }
+  
+  /* Small text elements - keep readable but not huge */
+  .text-sm, .text-xs {
+    @apply text-lg;
+    font-weight: 500;
+  }
+  
+  /* Footer text - slightly smaller */
+  footer p {
+    @apply text-lg;
+    font-weight: 500;
+  }
+  
+  footer li {
+    @apply text-base;
+    font-weight: 500;
+  }
+  
+  /* Navigation and UI elements */
+  nav a, button, input, select, textarea {
+    @apply text-lg;
+  }
+  
+  /* Table cells */
+  th, td {
+    font-weight: 600;
   }
 }
 

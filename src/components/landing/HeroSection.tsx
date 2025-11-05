@@ -57,12 +57,12 @@ export function HeroSection() {
       {/* Content wrapper with elevated z-index */}
       <div className="relative z-10">
         {/* Main Headline */}
-        <h1 className="font-hand text-6xl md:text-8xl flame-text">
+        <h1 className="font-hand text-6xl md:text-8xl flame-text mb-8">
           TROGDOR THE BURNINATOR
         </h1>
 
         {/* Subheadline */}
-        <p className="text-2xl md:text-3xl text-pencil font-hand max-w-3xl mx-auto">
+        <p className="text-3xl md:text-4xl text-pencil font-bold max-w-3xl mx-auto">
           Join the Cult. Every account is a ledger entry. Burninate together.
         </p>
 

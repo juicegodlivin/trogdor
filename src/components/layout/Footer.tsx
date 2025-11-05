@@ -14,7 +14,7 @@ export function Footer() {
           {/* About */}
           <div>
             <h3 className="font-hand text-2xl mb-4">About</h3>
-            <p className="text-sm text-pencil">
+            <p className="text-lg text-pencil">
               The Cult of Trogdor the Burninator. Every account is a ledger
               entry. Burninate together.
             </p>
@@ -23,7 +23,7 @@ export function Footer() {
           {/* Links */}
           <div>
             <h3 className="font-hand text-2xl mb-4">Links</h3>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-2 text-lg">
               <li>
                 <Link href="/history" className="hover:text-accent-red">
                   History & Lore
@@ -50,7 +50,7 @@ export function Footer() {
           {/* Community */}
           <div>
             <h3 className="font-hand text-2xl mb-4">Community</h3>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-2 text-lg">
               <li>
                 <a 
                   href="https://twitter.com/trogdorcult" 
@@ -69,16 +69,16 @@ export function Footer() {
             <h3 className="font-hand text-2xl mb-4">
               Stats
               {isLoading && (
-                <span className="text-xs text-pencil-light ml-2 font-normal">
+                <span className="text-base text-pencil-light ml-2 font-normal">
                   (live)
                 </span>
               )}
             </h3>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-lg">
               <div className="flex justify-between items-center">
                 <span>Cult Members</span>
                 {isLoading ? (
-                  <div className="h-4 w-16 bg-sketch animate-pulse rounded" />
+                  <div className="h-5 w-16 bg-sketch animate-pulse rounded" />
                 ) : (
                   <span className="font-bold">
                     {error ? '---' : stats?.cultMembers?.toLocaleString() || '0'}
@@ -88,7 +88,7 @@ export function Footer() {
               <div className="flex justify-between items-center">
                 <span>Total Offerings</span>
                 {isLoading ? (
-                  <div className="h-4 w-16 bg-sketch animate-pulse rounded" />
+                  <div className="h-5 w-16 bg-sketch animate-pulse rounded" />
                 ) : (
                   <span className="font-bold text-accent-green">
                     {error ? '---' : stats?.totalOfferings?.toLocaleString() || '0'}
@@ -98,7 +98,7 @@ export function Footer() {
               <div className="flex justify-between items-center">
                 <span>Images Generated</span>
                 {isLoading ? (
-                  <div className="h-4 w-16 bg-sketch animate-pulse rounded" />
+                  <div className="h-5 w-16 bg-sketch animate-pulse rounded" />
                 ) : (
                   <span className="font-bold">
                     {error ? '---' : stats?.imagesGenerated?.toLocaleString() || '0'}
@@ -110,14 +110,14 @@ export function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-12 pt-8 border-t border-sketch text-center text-sm text-pencil-light">
+        <div className="mt-12 pt-8 border-t border-sketch text-center text-lg text-pencil-light">
           <p>
             Trogdor the Burninator © 2003-2025 The Brothers Chaps. This is a
             fan tribute project.
           </p>
           <div className="mt-2 flex items-center justify-center gap-2">
             <span>Built with</span>
-            <MedievalIcon name="torch" size={16} />
+            <MedievalIcon name="torch" size={20} />
             <span>by the cult</span>
           </div>
         </div>

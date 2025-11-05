@@ -31,7 +31,8 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        hand: ['var(--font-caveat)', 'cursive'],
+        hand: ['var(--font-hand)', 'cursive'],
+        body: ['var(--font-body)', 'cursive'],
         mono: ['var(--font-jetbrains)', 'monospace'],
       },
       boxShadow: {

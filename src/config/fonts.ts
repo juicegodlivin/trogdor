@@ -1,4 +1,4 @@
-import { Inter, Caveat, JetBrains_Mono } from 'next/font/google';
+import { Inter, Caveat, Permanent_Marker, JetBrains_Mono } from 'next/font/google';
 
 export const inter = Inter({
   subsets: ['latin'],
@@ -6,10 +6,17 @@ export const inter = Inter({
   display: 'swap',
 });
 
-export const caveat = Caveat({
+export const permanentMarker = Permanent_Marker({
+  weight: '400',
   subsets: ['latin'],
-  variable: '--font-caveat',
-  weight: ['400', '700'],
+  variable: '--font-hand',
+  display: 'swap',
+});
+
+export const caveat = Caveat({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-body',
   display: 'swap',
 });
 

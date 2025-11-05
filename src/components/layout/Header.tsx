@@ -22,17 +22,8 @@ export function Header() {
         <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 border-sketch border-pencil p-1 bg-accent-green/20">
-              <Image
-                src="/images/trogdor/Trogdor the Burninator.png"
-                alt="Trogdor"
-                width={48}
-                height={48}
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <span className="font-hand text-2xl hidden md:block">
+          <Link href="/" className="flex items-center gap-3 group ml-4">
+            <span className="font-hand text-2xl">
               Trogdor the Burninator
             </span>
           </Link>

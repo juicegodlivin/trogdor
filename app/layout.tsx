@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { inter, caveat, jetbrainsMono } from '@/config/fonts';
+import { inter, permanentMarker, caveat, jetbrainsMono } from '@/config/fonts';
 import { TRPCProvider } from '@/lib/trpc/Provider';
 import { WalletProvider } from '@/components/providers/WalletProvider';
 import { SessionProvider } from '@/components/providers/SessionProvider';
@@ -42,7 +42,7 @@ export default function RootLayout({
   return (
     <html 
       lang="en" 
-      className={`${inter.variable} ${caveat.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${permanentMarker.variable} ${caveat.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-white" suppressHydrationWarning>

@@ -12,11 +12,11 @@ export default function ProductsPage() {
         <div className="text-center mb-16">
           <div className="flex items-center justify-center gap-4 mb-6">
             <MedievalIcon name="cart" size={80} />
-            <h1 className="font-hand text-6xl md:text-8xl flame-text">
+            <h1 className="font-hand text-6xl md:text-8xl flame-text mb-8">
               Trogdor Merchandise
             </h1>
           </div>
-          <p className="text-xl text-pencil max-w-3xl mx-auto">
+          <p className="text-3xl md:text-4xl text-pencil max-w-3xl mx-auto font-bold">
             Show your allegiance to the Burninator with official merch from the Brothers Chaps. 
             Every purchase fuels the eternal flame of Trogdor.
           </p>
@@ -29,7 +29,7 @@ export default function ProductsPage() {
               <MedievalIcon name="stall" size={80} />
             </div>
             <h2 className="font-hand text-4xl mb-4">Official Homestar Runner Store</h2>
-            <p className="text-lg text-pencil mb-6">
+            <p className="text-2xl text-pencil mb-6 font-semibold">
               All official Trogdor merchandise is available through the Homestar Runner Store. 
               Support the creators and get authentic burnination gear!
             </p>
@@ -102,7 +102,7 @@ export default function ProductsPage() {
                 Community Creations
               </h2>
             </div>
-            <p className="text-lg text-pencil mb-6">
+            <p className="text-2xl text-pencil mb-6 font-semibold">
               Want to see your Trogdor art featured? Generate art using our AI tool, 
               tweet it with <code className="bg-yellow-50 px-2 py-1 font-mono">@trogdorcult</code>, 
               and climb the leaderboard!

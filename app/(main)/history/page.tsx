@@ -12,11 +12,11 @@ export default function HistoryPage() {
         <div className="text-center mb-16">
           <div className="flex items-center justify-center gap-4 mb-6">
             <MedievalIcon name="scroll" size={80} />
-            <h1 className="font-hand text-6xl md:text-8xl flame-text">
+            <h1 className="font-hand text-6xl md:text-8xl flame-text mb-8">
               The Legend of Trogdor
             </h1>
           </div>
-          <p className="text-xl text-pencil max-w-3xl mx-auto">
+          <p className="text-3xl md:text-4xl text-pencil max-w-3xl mx-auto font-bold">
             From a simple email on January 13, 2003, Trogdor emerged from Strong Bad&apos;s 
             imagination to burninate the countryside and capture hearts worldwide.
           </p>
@@ -190,7 +190,7 @@ export default function HistoryPage() {
               <MedievalIcon name="torch" size={64} />
               <h2 className="font-hand text-5xl">Join the Burnination</h2>
             </div>
-            <p className="text-xl text-pencil mb-8 max-w-2xl mx-auto">
+            <p className="text-3xl text-pencil mb-8 max-w-2xl mx-auto font-bold">
               The legend continues with you. Connect your wallet, generate art, 
               and prove your devotion to Trogdor the Burninator.
             </p>

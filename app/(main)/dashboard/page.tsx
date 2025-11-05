@@ -115,10 +115,10 @@ export default function DashboardPage() {
         <div className="mb-12 flex items-center gap-4">
           <MedievalIcon name="torch" size={64} />
           <div>
-            <h1 className="font-hand text-6xl flame-text mb-2">
+            <h1 className="font-hand text-6xl flame-text mb-4">
               Your Dashboard
             </h1>
-            <p className="text-xl text-pencil">
+            <p className="text-3xl text-pencil font-bold">
               Manage your profile, link your X account, and track your burninations.
             </p>
           </div>
@@ -140,23 +140,23 @@ export default function DashboardPage() {
                   />
                 )}
               </div>
-              <h2 className="font-hand text-2xl text-center mb-4">
+              <h2 className="font-hand text-3xl text-center mb-4">
                 {profile?.username || 'Cult Member'}
               </h2>
               
               {/* Wallet Address */}
               <div className="mb-6">
-                <label className="text-sm text-pencil-light mb-2 block">
+                <label className="text-lg text-pencil-light mb-2 block font-bold">
                   Wallet Address
                 </label>
-                <div className="font-mono text-xs p-3 bg-yellow-50 border border-pencil rounded break-all">
+                <div className="font-mono text-base p-3 bg-yellow-50 border border-pencil rounded break-all">
                   {session.user.walletAddress}
                 </div>
               </div>
 
               {/* Twitter Connection */}
               <div className="mb-6">
-                <label className="text-sm text-pencil-light mb-2 block">
+                <label className="text-lg text-pencil-light mb-2 block font-bold">
                   X (Twitter) Account
                 </label>
                 {isTwitterLinked ? (
@@ -164,21 +164,21 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 p-3 bg-accent-green/20 border-sketch">
                       <MedievalIcon name="flag" size={24} />
                       <div className="flex-1">
-                        <div className="font-medium">
+                        <div className="font-medium text-lg">
                           @{profile.twitterUsername}
                         </div>
-                        <div className="text-xs text-pencil-light">Linked</div>
+                        <div className="text-base text-pencil-light">Linked</div>
                       </div>
               <button
                 onClick={() => unlinkTwitterMutation.mutate()}
                 disabled={unlinkTwitterMutation.isPending}
-                className="btn-sketch px-3 py-1 text-xs bg-accent-red text-white hover:bg-accent-red/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-sketch px-4 py-2 text-base bg-accent-red text-white hover:bg-accent-red/90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {unlinkTwitterMutation.isPending ? 'Unlinking...' : 'Unlink'}
               </button>
                     </div>
                     {linkError && (
-                      <div className="mt-2 text-xs text-accent-red">
+                      <div className="mt-2 text-base text-accent-red">
                         {linkError}
                       </div>
                     )}
@@ -191,19 +191,19 @@ export default function DashboardPage() {
                         value={twitterInput}
                         onChange={(e) => setTwitterInput(e.target.value)}
                         placeholder="@yourusername"
-                        className="flex-1 px-3 py-2 border-2 border-pencil font-mono text-sm focus:outline-none focus:border-accent-blue"
+                        className="flex-1 px-3 py-2 border-2 border-pencil font-mono text-base focus:outline-none focus:border-accent-blue"
                         disabled={isLinking}
                       />
                       <button
                         onClick={handleLinkTwitter}
                         disabled={isLinking || !twitterInput.trim()}
-                        className="btn-sketch px-4 py-2 bg-accent-blue text-white hover:bg-accent-blue/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn-sketch px-4 py-2 text-base bg-accent-blue text-white hover:bg-accent-blue/90 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {isLinking ? '...' : 'Link'}
                       </button>
                     </div>
                     {linkError && (
-                      <div className="mt-2 text-xs text-accent-red">
+                      <div className="mt-2 text-base text-accent-red">
                         {linkError}
                       </div>
                     )}
@@ -212,11 +212,11 @@ export default function DashboardPage() {
               </div>
 
               {isTwitterLinked && (
-                <div className="text-sm text-pencil bg-yellow-50 p-3 border border-pencil flex gap-2">
-                  <MedievalIcon name="torch" size={20} />
+                <div className="text-base text-pencil bg-yellow-50 p-3 border border-pencil flex gap-2">
+                  <MedievalIcon name="torch" size={24} />
                   <div>
                     <strong>Pro Tip:</strong> Tweet your generated art with{' '}
-                    <code className="font-mono bg-white px-1">@trogdorcult</code> to earn
+                    <code className="font-mono bg-white px-1 text-base">@trogdorcult</code> to earn
                     leaderboard points!
                   </div>
                 </div>
@@ -269,8 +269,8 @@ export default function DashboardPage() {
             {/* Recent Activity */}
             <div className="mt-6 border-sketch border-pencil p-6 notebook-paper">
               <div className="flex items-center gap-3 mb-4">
-                <MedievalIcon name="scroll" size={32} />
-                <h3 className="font-hand text-2xl">Recent Activity</h3>
+                <MedievalIcon name="scroll" size={40} />
+                <h3 className="font-hand text-3xl">Recent Activity</h3>
               </div>
               
               {profile?.recentMentions && profile.recentMentions.length > 0 ? (
@@ -280,10 +280,10 @@ export default function DashboardPage() {
                       key={mention.id}
                       className="flex items-start gap-3 p-3 border border-pencil-light"
                     >
-                      <MedievalIcon name="torch" size={32} />
+                      <MedievalIcon name="torch" size={40} />
                       <div className="flex-1">
-                        <p className="text-sm line-clamp-2">{mention.content}</p>
-                        <div className="flex items-center gap-3 mt-2 text-xs text-pencil-light">
+                        <p className="text-base line-clamp-2">{mention.content}</p>
+                        <div className="flex items-center gap-3 mt-2 text-base text-pencil-light">
                           <span>Score: {mention.qualityScore}/100</span>
                           <span>•</span>
                           <span>{new Date(mention.createdAt).toLocaleDateString()}</span>
@@ -294,8 +294,8 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-pencil-light">
-                  <p className="mb-2">No mentions yet!</p>
-                  <p className="text-sm">
+                  <p className="mb-2 text-lg">No mentions yet!</p>
+                  <p className="text-base">
                     {isTwitterLinked
                       ? 'Tweet about Trogdor and tag @trogdorcult to get started.'
                       : 'Link your X account to start tracking mentions.'}
@@ -315,7 +315,7 @@ export default function DashboardPage() {
             </div>
             <a
               href="/generator"
-              className="btn-sketch px-4 py-2 text-sm hover:bg-sketch"
+              className="btn-sketch px-6 py-3 text-lg hover:bg-sketch"
             >
               + Generate More
             </a>
@@ -350,8 +350,8 @@ export default function DashboardPage() {
               <div className="flex justify-center mb-4">
                 <MedievalIcon name="scroll" size={80} />
               </div>
-              <h3 className="font-hand text-2xl mb-2">No art generated yet!</h3>
-              <p className="text-pencil mb-4">
+              <h3 className="font-hand text-3xl mb-2">No art generated yet!</h3>
+              <p className="text-pencil mb-4 text-lg">
                 Summon Trogdor with the power of AI
               </p>
               <a
@@ -392,15 +392,15 @@ function StatCard({
   return (
     <div className="border-sketch border-pencil p-6 notebook-paper text-center">
       <div className="flex justify-center mb-2">
-        <MedievalIcon name={icon} size={48} />
+        <MedievalIcon name={icon} size={56} />
       </div>
-      <div className="text-sm text-pencil-light mb-2">{label}</div>
+      <div className="text-lg font-bold text-pencil-light mb-2">{label}</div>
       {loading ? (
         <div className="h-10 flex items-center justify-center">
           <LoadingSpinner />
         </div>
       ) : (
-        <div className={`text-3xl font-bold text-${color}`}>
+        <div className={`text-4xl font-bold text-${color}`}>
           {prefix}
           {value}
           {suffix}
@@ -450,14 +450,14 @@ function ImageCard({ image, onDelete }: ImageCardProps) {
           <div className="flex gap-2">
             <button
               onClick={handleReprompt}
-              className="btn-sketch px-3 py-2 bg-accent-blue text-white hover:bg-accent-blue/90 text-sm"
+              className="btn-sketch px-4 py-2 bg-accent-blue text-white hover:bg-accent-blue/90 text-base"
               title="Reprompt and refine"
             >
               ✏️ Reprompt
             </button>
             <button
               onClick={handleDownload}
-              className="btn-sketch px-3 py-2 bg-accent-green text-white hover:bg-accent-green/90 text-sm"
+              className="btn-sketch px-4 py-2 bg-accent-green text-white hover:bg-accent-green/90 text-base"
               title="Download image"
             >
               💾 Download
@@ -465,7 +465,7 @@ function ImageCard({ image, onDelete }: ImageCardProps) {
           </div>
           <button
             onClick={onDelete}
-            className="btn-sketch px-3 py-2 bg-accent-red text-white hover:bg-accent-red/90 text-sm w-full"
+            className="btn-sketch px-4 py-2 bg-accent-red text-white hover:bg-accent-red/90 text-base w-full"
             title="Delete image"
           >
             🗑️ Delete
@@ -473,8 +473,8 @@ function ImageCard({ image, onDelete }: ImageCardProps) {
         </div>
       </div>
       <div className="p-3 bg-white">
-        <p className="text-sm line-clamp-2 mb-2">{image.prompt}</p>
-        <div className="text-xs text-pencil-light">
+        <p className="text-base line-clamp-2 mb-2">{image.prompt}</p>
+        <div className="text-base text-pencil-light">
           {new Date(image.generatedAt).toLocaleDateString()}
         </div>
       </div>
