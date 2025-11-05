@@ -4,6 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import bs58 from 'bs58';
 
 export function WalletConnectButton() {
@@ -159,7 +160,7 @@ export function WalletConnectButton() {
     return (
       <div className="flex items-center gap-3">
         {/* Wallet Address - Clickable to Dashboard */}
-        <a
+        <Link
           href="/dashboard"
           className="hidden sm:flex items-center gap-2 px-3 py-2 border-sketch hover:bg-accent-yellow/20 transition-colors"
         >
@@ -168,15 +169,15 @@ export function WalletConnectButton() {
             {session.user.walletAddress?.slice(0, 4)}...
             {session.user.walletAddress?.slice(-4)}
           </div>
-        </a>
+        </Link>
         
         {/* Mobile: Just icon */}
-        <a
+        <Link
           href="/dashboard"
           className="sm:hidden flex items-center justify-center w-10 h-10 border-sketch hover:bg-accent-yellow/20 transition-colors"
         >
           <span className="text-2xl">🐉</span>
-        </a>
+        </Link>
         
         <button
           onClick={handleDisconnect}

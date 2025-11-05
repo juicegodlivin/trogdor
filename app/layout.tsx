@@ -4,6 +4,7 @@ import { TRPCProvider } from '@/lib/trpc/Provider';
 import { WalletProvider } from '@/components/providers/WalletProvider';
 import { SessionProvider } from '@/components/providers/SessionProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { MusicPlayer } from '@/components/ui/MusicPlayer';
 import { Toaster } from 'react-hot-toast';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -81,6 +82,7 @@ export default function RootLayout({
             </WalletProvider>
           </SessionProvider>
         </ErrorBoundary>
+        <MusicPlayer audioSrc="/audio/trogdor-theme.mp3" title="Trogdor Theme" />
       </body>
     </html>
   );
