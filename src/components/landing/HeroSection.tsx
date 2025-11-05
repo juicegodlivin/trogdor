@@ -10,25 +10,47 @@ export function HeroSection() {
   
   return (
     <section className="text-center space-y-8 py-20 px-4 relative">
-      {/* Trogdor living on the page - fixed position on desktop, own section on mobile */}
-      <div className="lg:absolute lg:left-0 lg:top-1/2 lg:-translate-y-1/2 lg:pointer-events-none lg:z-0 flex justify-center lg:justify-start mb-8 lg:mb-0 lg:w-[300px] xl:w-[400px] 2xl:w-[500px]">
+      {/* Mobile: Side-by-side layout - aligned at bottom */}
+      <div className="flex justify-center items-end gap-4 mb-8 lg:hidden">
+        <div className="w-[230px] sm:w-72">
+          <Image
+            src="/images/trogdor/Trogdor the Burninator.png"
+            alt="Trogdor the Burninator"
+            width={625}
+            height={625}
+            className="w-full h-auto"
+          />
+        </div>
+        <div className="w-32 sm:w-40">
+          <Image
+            src="/images/trogdor/Peasant Burninating.png"
+            alt="Peasant being burninated"
+            width={500}
+            height={500}
+            className="w-full h-auto"
+          />
+        </div>
+      </div>
+
+      {/* Desktop: Trogdor on left - 25% larger, lowered to align with peasant */}
+      <div className="hidden lg:block lg:absolute lg:left-0 lg:top-[55%] lg:-translate-y-1/2 lg:pointer-events-none lg:z-0 lg:w-[375px] xl:w-[500px] 2xl:w-[625px]">
         <Image
           src="/images/trogdor/Trogdor the Burninator.png"
           alt="Trogdor the Burninator"
-          width={500}
-          height={500}
-          className="w-48 sm:w-56 md:w-64 lg:w-full h-auto"
+          width={625}
+          height={625}
+          className="w-full h-auto"
         />
       </div>
 
-      {/* Burning Peasant on the right - balances Trogdor on the left */}
-      <div className="lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2 lg:pointer-events-none lg:z-0 flex justify-center lg:justify-end mb-8 lg:mb-0 lg:w-[300px] xl:w-[400px] 2xl:w-[500px]">
+      {/* Desktop: Burning Peasant on right - same horizontal level */}
+      <div className="hidden lg:block lg:absolute lg:right-0 lg:top-1/2 lg:-translate-y-1/2 lg:pointer-events-none lg:z-0 lg:w-[300px] xl:w-[400px] 2xl:w-[500px]">
         <Image
           src="/images/trogdor/Peasant Burninating.png"
           alt="Peasant being burninated"
           width={500}
           height={500}
-          className="w-48 sm:w-56 md:w-64 lg:w-full h-auto"
+          className="w-full h-auto"
         />
       </div>
 
