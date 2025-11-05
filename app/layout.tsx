@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: 'Trogdor the Burninator - The Cult',
     description: 'Join the Cult of Trogdor the Burninator on Solana',
     images: ['/images/trogdor/Trogdor the Burninator.png'],
-    url: 'https://trogdor.vercel.app',
+    url: 'https://www.trogdortheburninator.net',
   },
   twitter: {
     card: 'summary_large_image',
