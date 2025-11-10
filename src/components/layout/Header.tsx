@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import Image from 'next/image';
 import { WalletConnectButton } from '@/components/wallet/WalletConnectButton';
+import { ContractAddressWidget } from '@/components/ui/ContractAddressWidget';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,9 +21,12 @@ export function Header() {
       
       <header className="sticky top-0 z-50 bg-white border-b-2 border-pencil shadow-sm">
         <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-20 gap-4">
+          {/* CA Widget - Hidden on mobile, shown on desktop */}
+          <ContractAddressWidget className="hidden md:flex" />
+
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group ml-4">
+          <Link href="/" className="flex items-center gap-3 group">
             <span className="font-hand text-2xl">
               Trogdor the Burninator
             </span>
@@ -118,4 +122,5 @@ function NavLink({
     </Link>
   );
 }
+
 

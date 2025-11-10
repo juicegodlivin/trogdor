@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { MedievalIcon } from '@/components/ui/MedievalIcon';
+import { ContractAddressWidget } from '@/components/ui/ContractAddressWidget';
 import { trpc } from '@/lib/trpc/client';
 
 export function HeroSection() {
@@ -10,6 +11,11 @@ export function HeroSection() {
   
   return (
     <section className="text-center space-y-8 py-20 px-4 relative">
+      {/* Mobile: CA Widget above images */}
+      <div className="flex justify-center mb-6 lg:hidden">
+        <ContractAddressWidget variant="hero" />
+      </div>
+
       {/* Mobile: Side-by-side layout - aligned at bottom */}
       <div className="flex justify-center items-end gap-4 mb-8 lg:hidden">
         <div className="w-[230px] sm:w-72">
