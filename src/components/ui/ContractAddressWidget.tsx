@@ -10,7 +10,7 @@ interface ContractAddressWidgetProps {
 
 export function ContractAddressWidget({ className = '', variant = 'header' }: ContractAddressWidgetProps) {
   const [copied, setCopied] = useState(false);
-  const contractAddress = 'Soon...'; // Replace with actual CA when launching
+  const contractAddress = 'CCvR4aer3X8LQyb4ci8kna9Pb2diwtgmPzK3dZHTpump';
 
   const handleCopy = async () => {
     // Only copy if it's an actual address, not the placeholder
