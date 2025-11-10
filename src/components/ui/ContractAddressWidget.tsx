@@ -13,20 +13,13 @@ export function ContractAddressWidget({ className = '', variant = 'header' }: Co
   const contractAddress = 'CCvR4aer3X8LQyb4ci8kna9Pb2diwtgmPzK3dZHTpump';
 
   const handleCopy = async () => {
-    // Only copy if it's an actual address, not the placeholder
-    if (contractAddress !== 'Soon...') {
-      try {
-        await navigator.clipboard.writeText(contractAddress);
-        setCopied(true);
-        toast.success('Contract address copied!');
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        toast.error('Failed to copy address');
-      }
-    } else {
-      toast('Coming soon!', {
-        icon: '🔥',
-      });
+    try {
+      await navigator.clipboard.writeText(contractAddress);
+      setCopied(true);
+      toast.success('Contract address copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Failed to copy address');
     }
   };
 
@@ -41,7 +34,7 @@ export function ContractAddressWidget({ className = '', variant = 'header' }: Co
     <button
       onClick={handleCopy}
       className={`${baseClasses} ${variantClasses} ${className}`}
-      title={contractAddress === 'Soon...' ? 'Coming soon!' : 'Click to copy contract address'}
+      title="Click to copy contract address"
     >
       <span className="font-mono text-sm font-semibold text-pencil">
         CA: {contractAddress}
